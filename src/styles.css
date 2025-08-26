@@ -1,0 +1,93 @@
+
+:root{
+  --w: 340px; /* ความกว้างใบเสร็จ (58mm ~ 320-384px), สำหรับ 80mm ใช้ ~560-576px */
+}
+*{ box-sizing:border-box; }
+body{ margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Noto Sans Thai', sans-serif; background:#f6f7f9; color:#222; }
+.container{ max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+.card{ background:white; border-radius:16px; box-shadow: 0 6px 24px rgba(0,0,0,.06); padding:16px; }
+.grid{ display:grid; gap:16px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+label{ display:block; font-size: 14px; margin: 8px 0 6px; }
+input, select, textarea{ width:100%; padding:10px; border:1px solid #ddd; border-radius:10px; font-size:14px; }
+button{ padding:10px 14px; border:none; border-radius:12px; cursor:pointer; font-weight:600; }
+.btn{ background:#111827; color:white; }
+.btn.outline{ background:white; color:#111827; border:1px solid #111827; }
+.row{ display:flex; gap:10px; flex-wrap:wrap; }
+.badge{ border:1px dashed #bbb; padding:8px 10px; border-radius:10px; background:#f8fafc; }
+.table{ width:100%; border-collapse: collapse; }
+.table th, .table td{ padding:8px 10px; border-bottom:1px solid #eee; text-align:left; }
+.kbd{ background:#efefef; border-radius:6px; padding:1px 6px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; }
+
+
+/* Receipt-specific CSS adjustments */
+.receipt {
+    width: 100%; /* Make it responsive within its container */
+    max-width: 58mm; /* Standard thermal receipt paper width */
+    margin: 0 auto;
+    background: white;
+    padding: 8px; /* Reduced padding for a more compact look */
+    font-size: 20px; /* Smaller font size for receipts */
+    color: #000; /* Black text for clarity */
+}
+
+.receipt h1 {
+    font-size: 14px; /* Smaller heading */
+    margin: 0 0 2px;
+}
+
+.receipt .sub {
+    font-size: 18px; /* Smaller subheading */
+    color: #444; /* Dark gray for a softer look */
+}
+
+.receipt p {
+    margin: 0;
+    line-height: 1.4;
+}
+
+.receipt .address,
+.receipt .info {
+    font-size: 10px; /* Very small text for details */
+    margin-bottom: 4px;
+}
+
+.hr {
+    border-top: 1px dashed #111827; /* Lighter dashed line */
+    margin: 12px 0; /* Reduced margin for compactness */
+}
+
+.qr {
+    display: flex;
+    justify-content: center;
+    margin: 8px 0; /* Reduced margin */
+}
+@media print {
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  .receipt {
+    width: 58mm;  /* ขนาดกระดาษ */
+    padding: 4px;
+    font-size: 16px;
+    font-family: "TH Sarabun New", Arial, sans-serif;
+  }
+
+  .receipt .hr {
+    border-top: 1px dashed #000;
+    margin: 4px 0;
+  }
+
+  .receipt .qr {
+    display: flex;
+    justify-content: center;
+    margin: 6px 0;
+  }
+
+  @page {
+    size: 58mm auto;  /* กว้าง fix แต่สูงตามเนื้อหา */
+    margin: 2mm;
+  }
+}
+
