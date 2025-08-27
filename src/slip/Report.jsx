@@ -72,53 +72,80 @@ export default function Report() {
 
   // export excel
   // export excel พร้อมรูปภาพ
-  const exportToExcel = async (ids) => {
-    const rows = ids.length ? visitors.filter(v => ids.includes(v.id)) : visitors
-    if (!rows.length) return alert("กรุณาเลือกรายการก่อน")
+ const exportToExcel = async (ids) => {
+  const rows = ids.length ? visitors.filter(v => ids.includes(v.id)) : visitors
+  if (!rows.length) return alert("กรุณาเลือกรายการก่อน")
 
-    const wb = new ExcelJS.Workbook()
-    const ws = wb.addWorksheet('Visitors')
+  const wb = new ExcelJS.Workbook()
+  const ws = wb.addWorksheet('Visitors')
 
-    ws.columns = [
-      { header: 'ID', key: 'id', width: 10 },
-      { header: 'ชื่อ', key: 'full_name', width: 25 },
-      { header: 'ผู้ติดต่อ', key: 'contact_person', width: 25 },
-      { header: 'เวลาเข้า', key: 'checkin_time', width: 20 },
-      { header: 'เวลาออก', key: 'checkout_time', width: 20 },
-      { header: 'รูปภาพ', key: 'photo', width: 15 }
-    ]
+  ws.columns = [
+    { header: 'ID', key: 'id', width: 10 },
+    { header: 'ชื่อ', key: 'full_name', width: 25 },
+    { header: 'ผู้ติดต่อ', key: 'contact_person', width: 25 },
+    { header: 'เวลาเข้า', key: 'checkin_time', width: 20 },
+    { header: 'เวลาออก', key: 'checkout_time', width: 20 },
+    { header: 'รูปภาพ', key: 'photo', width: 15 }
+  ]
 
-    for (const v of rows) {
-      const row = ws.addRow({
-        id: String(v.id).padStart(10, '0'),
-        full_name: v.full_name || '',
-        contact_person: v.contact_person || '',
-        checkin_time: v.checkin_time ? new Date(v.checkin_time).toLocaleString() : '',
-        checkout_time: v.checkout_time ? new Date(v.checkout_time).toLocaleString() : '',
-        photo: ''
-      })
+  for (const v of rows) {
+    const row = ws.addRow({
+      id: String(v.id).padStart(10, '0'),
+      full_name: v.full_name || '',
+      contact_person: v.contact_person || '',
+      checkin_time: v.checkin_time ? new Date(v.checkin_time).toLocaleString() : '',
+      checkout_time: v.checkout_time ? new Date(v.checkout_time).toLocaleString() : '',
+      photo: ''
+    })
 
-      // ถ้ามีรูปให้ embed
-      if (v.photo_url) {
-        try {
-          const imgBlob = await (await fetch(v.photo_url)).arrayBuffer()
-          const imgId = wb.addImage({
-            buffer: imgBlob,
-            extension: 'jpeg',
-          })
-          ws.addImage(imgId, {
-            tl: { col: 5, row: row.number },   // แถว row ปัจจุบัน
-            ext: { width: 80, height: 60 }     // ขนาดรูป
-          })
-        } catch (err) {
-          console.warn('ไม่สามารถโหลดรูป', v.photo_url, err)
-        }
+    // ถ้ามีรูปให้ embed
+    if (v.photo_url) {
+      try {
+        const imgBlob = await (await fetch(v.photo_url)).arrayBuffer()
+        const imgId = wb.addImage({
+          buffer: imgBlob,
+          extension: 'jpeg',
+        })
+        ws.addImage(imgId, {
+          tl: { col: 5, row: row.number },   // แถว row ปัจจุบัน
+          ext: { width: 80, height: 60 }     // ขนาดรูป
+        })
+      } catch (err) {
+        console.warn('ไม่สามารถโหลดรูป', v.photo_url, err)
       }
     }
-
-    const buf = await wb.xlsx.writeBuffer()
-    saveAs(new Blob([buf], { type: 'application/octet-stream' }), `visitors_${new Date().toISOString().slice(0, 10)}.xlsx`)
   }
+
+  // 🔹 AutoFit Columns
+  ws.columns.forEach((col) => {
+    let maxLength = 10 // ความกว้างขั้นต่ำ
+    col.eachCell({ includeEmpty: true }, (cell) => {
+      const cellValue = cell.value ? cell.value.toString() : ''
+      maxLength = Math.max(maxLength, cellValue.length)
+    })
+    col.width = maxLength + 2 // บวกเผื่อ padding
+  })
+
+  // 🔹 AutoFit Rows (ปรับความสูงตามจำนวนบรรทัด)
+  ws.eachRow((row) => {
+    let maxLines = 1
+    row.eachCell((cell) => {
+      if (typeof cell.value === 'string') {
+        const lines = cell.value.split(/\r?\n/).length
+        maxLines = Math.max(maxLines, lines)
+      }
+    })
+    row.height = maxLines * 15 // ปรับตัวเลขนี้ตามฟอนต์ (15px/บรรทัด)
+  })
+
+  // 🔹 Save Excel
+  const buf = await wb.xlsx.writeBuffer()
+  saveAs(
+    new Blob([buf], { type: 'application/octet-stream' }),
+    `visitors_${new Date().toISOString().slice(0, 10)}.xlsx`
+  )
+}
+
 
 
   return (
@@ -145,35 +172,38 @@ export default function Report() {
 
         />
         <div>
-          <button
-            onClick={() => loadVisitors(searchDate)}
-            className="bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600 transition duration-200 ease-in-out"
-          >
-            ค้นหา
-          </button>
+  <button
+    onClick={() => loadVisitors(searchDate)}
+    className="custom-btn bg-blue-500 text-white px-4 py-2 rounded shadow"
+  >
+    ค้นหา
+  </button>
 
-          <button
-            onClick={() => exportToExcel(selectedIds)}
-            className="bg-green-500 text-white px-4 py-2 rounded shadow hover:bg-green-600"
-            style={{ marginLeft: 7 }}
-          >
-            Export
-          </button>        <button
-            onClick={() => deleteVisitor(selectedIds)}
-            className="bg-red-500 text-white px-4 py-2 rounded shadow hover:bg-red-600"
-            style={{ marginLeft: 7 }}
-          >
-            ลบ (เลือก)
-          </button>
+  <button
+    onClick={() => exportToExcel(selectedIds)}
+    className="custom-btn3 bg-green-500 text-white px-4 py-2 rounded shadow"
+    style={{ marginLeft: 7 }}
+  >
+    Export
+  </button>
 
-          <button
-            onClick={() => navigate('/')}
-            className="ml-auto bg-gray-500 text-white px-6 py-3 rounded-full shadow-lg hover:bg-gray-600 transition"
-            style={{ marginLeft: 7 }}
-          >
-            ⬅ กลับสู่หน้าหลัก
-          </button>
-        </div>
+  <button
+    onClick={() => deleteVisitor(selectedIds)}
+    className="custom-btn bg-red-500 text-white px-4 py-2 rounded shadow"
+    style={{ marginLeft: 7 }}
+  >
+    ลบ (เลือก)
+  </button>
+
+  <button
+    onClick={() => navigate('/')}
+    className="custom-btn ml-auto bg-gray-500 text-white px-6 py-3 rounded-full shadow-lg"
+    style={{ marginLeft: 7 }}
+  >
+    ⬅ กลับสู่หน้าหลัก
+  </button>
+</div>
+
 
 
 
@@ -203,59 +233,45 @@ export default function Report() {
               <th className="border px-3 py-2">ลบ</th>
             </tr>
           </thead>
-          
+
           <tbody>
             {visitors.map(v => (
               <tr key={v.id} className={`hover:bg-gray-50 ${selectedIds.includes(v.id) ? 'bg-yellow-50' : ''}`}>
-                <td className="border px-3 py-2 text-center">
+                <td data-label="เลือก" className="border px-3 py-2 text-center">
                   <input
                     type="checkbox"
                     checked={selectedIds.includes(v.id)}
                     onChange={() => toggleSelect(v.id)}
                   />
                 </td>
-                <td className="border px-3 py-2">{v.id}</td>
-                <td className="border px-3 py-2">{v.full_name}</td>
-                <td className="border px-3 py-2">{v.contact_person}</td>
-                <td className="border px-3 py-2">{v.checkin_time ? new Date(v.checkin_time).toLocaleString() : ''}</td>
-                <td className="border px-3 py-2">
-                  {v.checkout_time ? new Date(v.checkout_time).toLocaleString() : <span className="text-gray-400">—</span>}
-                </td>
-                <td className="border px-3 py-2 text-center">
+                <td data-label="ID" className="border px-3 py-2">{v.id}</td>
+                <td data-label="ชื่อ" className="border px-3 py-2">{v.full_name}</td>
+                <td data-label="ติดต่อกับ" className="border px-3 py-2">{v.contact_person}</td>
+                <td data-label="เวลาเข้า" className="border px-3 py-2">{v.checkin_time ? new Date(v.checkin_time).toLocaleString() : ''}</td>
+                <td data-label="เวลาออก" className="border px-3 py-2">{v.checkout_time ? new Date(v.checkout_time).toLocaleString() : <span className="text-gray-400">—</span>}</td>
+                <td data-label="พิมพ์" className="border px-3 py-2 text-center">
                   <a className="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300" href={`/print/${v.id}`} target="_blank">
                     พิมพ์
                   </a>
                 </td>
-                <td className="border px-3 py-2 text-center">
+                <td data-label="เช็คเอาท์" className="border px-3 py-2 text-center">
                   {!v.checkout_time ? (
-                    <button
-                      className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
-                      onClick={() => checkOut(v.id)}
-                    >
+                    <button className="custom-btn1 bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600" onClick={() => checkOut(v.id)}>
                       เช็คเอาท์
                     </button>
                   ) : (
                     <span className="text-green-500 font-bold">เสร็จสิ้น</span>
                   )}
                 </td>
-                <td className="border px-3 py-2 text-center">
-                  <button
-                    className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-                    onClick={() => deleteVisitor([v.id])}
-                  >
+                <td data-label="ลบ" className="border px-3 py-2 text-center">
+                  <button className="custom-btn2 bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600" onClick={() => deleteVisitor([v.id])}>
                     ลบ
                   </button>
                 </td>
               </tr>
             ))}
-            {!visitors.length && (
-              <tr>
-                <td colSpan="9" className="text-center text-gray-500 py-6">
-                  ไม่มีข้อมูล
-                </td>
-              </tr>
-            )}
           </tbody>
+
         </table>
       </div>
     </div>
