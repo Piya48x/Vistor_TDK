@@ -5,7 +5,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import App from './App.jsx'
 import PrintSlip from './slip/PrintSlip.jsx'
 import './styles.css'
-import Report from './slip/report.jsx'
+import Report from './slip/Report.jsx'
 import SlipFromQR from './slip/SlipFromQR.jsx'
 import VisitorPage from './VisitorPage.jsx'
 
