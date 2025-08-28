@@ -6,15 +6,12 @@ import App from './App.jsx'
 import PrintSlip from './slip/PrintSlip.jsx'
 import './styles.css'
 import Report from './slip/Report.jsx'
-import SlipFromQR from './slip/SlipFromQR.jsx'
-import VisitorPage from './VisitorPage.jsx'
+
 
 const router = createBrowserRouter([
   { path: '/', element: <App /> },
   { path: '/print/:id', element: <PrintSlip /> },
   { path: '/Report', element: <Report /> },
-  { path: '/SlipFromQR', element: <SlipFromQR /> },
-  { path: '/VisitorPage/:id', element: <VisitorPage /> },
 
 ])
 

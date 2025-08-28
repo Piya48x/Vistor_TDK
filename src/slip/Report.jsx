@@ -181,7 +181,7 @@ export default function Report() {
 
   <button
     onClick={() => exportToExcel(selectedIds)}
-    className="custom-btn3 bg-green-500 text-white px-4 py-2 rounded shadow"
+    className="custom-btn bg-green-500 text-white px-4 py-2 rounded shadow"
     style={{ marginLeft: 7 }}
   >
     Export
