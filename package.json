@@ -20,6 +20,8 @@
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.30.1",
     "react-table": "^7.8.0",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
@@ -33,5 +35,18 @@
     "tailwindcss": "^3.4.17",
     "vite": "^5.4.0",
     "vite-plugin-static-copy": "^3.1.2"
-  }
+  },
+  "description": "ระบบบันทึกผู้มาติดต่อพื้นที่ (VMS) ใช้ **Supabase (Free tier)** เป็นฐานข้อมูล + ที่เก็บรูป + realtime. รองรับ: เก็บข้อมูลจากบัตร (ป้อนเอง/ต่อยอดเครื่องอ่านชิป), ถ่ายภาพ, พิมพ์สลิปแนวตั้ง 58mm พร้อม QR, Dashboard เรียลไทม์, เช็คเอาท์.",
+  "main": "postcss.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Piya48x/Vistor_TDK.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Piya48x/Vistor_TDK/issues"
+  },
+  "homepage": "https://github.com/Piya48x/Vistor_TDK#readme"
 }
