@@ -58,6 +58,8 @@ export default function App() {
   })
   const [photoDataUrl, setPhotoDataUrl] = useState('')
   const [loading, setLoading] = useState(false)
+  const [lang, setLang] = useState('th')
+
   const [visitors, setVisitors] = useState([])
 
   // validate & guide states
@@ -415,19 +417,40 @@ export default function App() {
                 </div>
               )}
               {fields.purpose && (
-                <div style={{ flex: 1 }}>
-                  <label>วัตถุประสงค์</label>
-                  <input
-                    data-field="purpose"
-                    aria-invalid={!!errors.purpose}
-                    className={errors.purpose ? 'input error' : 'input'}
-                    value={form.purpose}
-                    onChange={(e) => setForm((f) => ({ ...f, purpose: e.target.value }))}
-                  />
-                  {errors.purpose && (
-                    <small className="error-text">{errors.purpose}</small>
-                  )}
-                </div>
+             <div style={{ flex: 1 }}>
+  <label>วัตถุประสงค์</label>
+  <select
+    data-field="purpose"
+    aria-invalid={!!errors.purpose}
+    className={errors.purpose ? 'input error' : 'input'}
+    value={form.purpose}
+    onChange={(e) => setForm((f) => ({ ...f, purpose: e.target.value }))}
+  >
+    <option value="">-- เลือกวัตถุประสงค์ --</option>
+    <option value="meeting">ประชุมงาน</option>
+    <option value="delivery">ส่งของ</option>
+    <option value="maintenance">ซ่อมบำรุง</option>
+    <option value="visit">เยี่ยมชม</option>
+    <option value="interview">สมัครงาน/สัมภาษณ์</option>
+    <option value="other">อื่น ๆ</option>
+  </select> <br />
+
+  {/* แสดง input เมื่อเลือก "อื่น ๆ" */}
+  {form.purpose === "other" && (
+    <input
+      type="text"
+      placeholder="โปรดระบุวัตถุประสงค์"
+      className="input"
+      value={form.otherPurpose || ""}
+      onChange={(e) => setForm((f) => ({ ...f, otherPurpose: e.target.value }))}
+    />
+  )}
+
+  {errors.purpose && (
+    <small className="error-text">{errors.purpose}</small>
+  )}
+</div>
+
               )}
             </div>
 
