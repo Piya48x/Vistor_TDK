@@ -1,11 +1,11 @@
 // App.jsx
-import React, { useEffect, useRef, useState } from 'react'
-import { supabase } from './supabaseClient'
-import { DEFAULT_FIELDS } from './config'
-import QRCode from 'qrcode'
+import React, { useEffect, useRef, useState } from "react";
+import { supabase } from "./supabaseClient";
+import { DEFAULT_FIELDS } from "./config";
+import QRCode from "qrcode";
 
-const ORG = import.meta.env.VITE_ORG_NAME || 'Just-iD Visitor'
-const SITE = import.meta.env.VITE_SITE_NAME || 'Global Securitech'
+const ORG = import.meta.env.VITE_ORG_NAME || "Just-iD Visitor";
+const SITE = import.meta.env.VITE_SITE_NAME || "Global Securitech";
 
 /** ช่องที่ "จำเป็นต้องกรอก" (จะตรวจเฉพาะช่องที่เปิดใช้งานอยู่จริงใน fields เท่านั้น) */
 const REQUIRED_FIELDS = {
@@ -21,194 +21,212 @@ const REQUIRED_FIELDS = {
   gender: false,
   chip_serial: false,
   note: false,
-}
+};
 
 /** mapping label ภาษาไทยสำหรับทำ error message */
 const labelOf = (key) =>
   ({
-    id_type: 'ประเภทบัตร',
-    id_number: 'หมายเลขบัตร',
-    full_name: 'ชื่อ-นามสกุล',
-    gender: 'เพศ',
-    company: 'บริษัทต้นสังกัด',
-    phone: 'เบอร์โทร',
-    contact_person: 'ผู้ติดต่อภายใน',
-    purpose: 'วัตถุประสงค์',
-    vehicle_plate: 'ทะเบียนรถ',
-    vehicle_type: 'ประเภทรถ',
-    chip_serial: 'Chip Serial',
-    note: 'บันทึกเพิ่มเติม',
-  }[key] || key)
+    id_type: "ประเภทบัตร",
+    id_number: "หมายเลขบัตร",
+    full_name: "ชื่อ-นามสกุล",
+    gender: "เพศ",
+    company: "บริษัทต้นสังกัด",
+    phone: "เบอร์โทร",
+    contact_person: "ผู้ติดต่อภายใน",
+    purpose: "วัตถุประสงค์",
+    vehicle_plate: "ทะเบียนรถ",
+    vehicle_type: "ประเภทรถ",
+    chip_serial: "Chip Serial",
+    note: "บันทึกเพิ่มเติม",
+  }[key] || key);
 
 export default function App() {
-  const [fields, setFields] = useState(DEFAULT_FIELDS)
+  const [fields, setFields] = useState(DEFAULT_FIELDS);
   const [form, setForm] = useState({
-    id_type: 'citizen',
-    id_number: '',
-    full_name: '',
-    gender: '',
-    company: '',
-    phone: '',
-    contact_person: '',
-    purpose: '',
-    vehicle_plate: '',
-    vehicle_type: '',
-    chip_serial: '',
-    note: '',
-  })
-  const [photoDataUrl, setPhotoDataUrl] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [lang, setLang] = useState('th')
+    id_type: "citizen",
+    id_number: "",
+    full_name: "",
+    gender: "",
+    company: "",
+    phone: "",
+    contact_person: "",
+    purpose: "",
+    otherPurpose: "", // ✅ เพิ่มใน state
+    vehicle_plate: "",
+    vehicle_type: "",
+    chip_serial: "",
+    note: "",
+  });
 
-  const [visitors, setVisitors] = useState([])
+  const [photoDataUrl, setPhotoDataUrl] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [lang, setLang] = useState("th");
+
+  const [visitors, setVisitors] = useState([]);
 
   // validate & guide states
-  const [errors, setErrors] = useState({})
-  const firstErrorRef = useRef(null)
+  const [errors, setErrors] = useState({});
+  const firstErrorRef = useRef(null);
 
   const [showGuide, setShowGuide] = useState(
-    () => localStorage.getItem('vms_hide_guide') !== '1'
-  )
+    () => localStorage.getItem("vms_hide_guide") !== "1"
+  );
 
-  const videoRef = useRef(null)
-  const streamRef = useRef(null)
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
 
   // Init webcam
   useEffect(() => {
-    ;(async () => {
+    (async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: false,
-        })
-        streamRef.current = stream
-        if (videoRef.current) videoRef.current.srcObject = stream
+        });
+        streamRef.current = stream;
+        if (videoRef.current) videoRef.current.srcObject = stream;
       } catch (err) {
-        console.warn('camera error', err)
+        console.warn("camera error", err);
       }
-    })()
+    })();
     return () => {
-      if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop())
-    }
-  }, [])
+      if (streamRef.current)
+        streamRef.current.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
 
   // Load latest visitors
   const loadVisitors = async () => {
     const { data, error } = await supabase
-      .from('visitors')
-      .select('*')
-      .order('id', { ascending: false })
-      .limit(50)
-    if (!error) setVisitors(data || [])
-  }
+      .from("visitors")
+      .select("*")
+      .order("id", { ascending: false })
+      .limit(50);
+    if (!error) setVisitors(data || []);
+  };
   useEffect(() => {
-    loadVisitors()
-  }, [])
+    loadVisitors();
+  }, []);
 
   // Realtime subscribe
   useEffect(() => {
     const channel = supabase
-      .channel('visitors-changes')
+      .channel("visitors-changes")
       .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'visitors' },
+        "postgres_changes",
+        { event: "*", schema: "public", table: "visitors" },
         () => {
-          loadVisitors()
+          loadVisitors();
         }
       )
-      .subscribe()
+      .subscribe();
     return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [])
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const takeSnapshot = () => {
-    const video = videoRef.current
-    if (!video) return
-    const cv = document.createElement('canvas')
-    cv.width = video.videoWidth || 640
-    cv.height = video.videoHeight || 480
-    const ctx = cv.getContext('2d')
-    ctx.drawImage(video, 0, 0, cv.width, cv.height)
-    const url = cv.toDataURL('image/jpeg', 0.9)
-    setPhotoDataUrl(url)
-  }
+    const video = videoRef.current;
+    if (!video) return;
+    const cv = document.createElement("canvas");
+    cv.width = video.videoWidth || 640;
+    cv.height = video.videoHeight || 480;
+    const ctx = cv.getContext("2d");
+    ctx.drawImage(video, 0, 0, cv.width, cv.height);
+    const url = cv.toDataURL("image/jpeg", 0.9);
+    setPhotoDataUrl(url);
+  };
 
   const uploadPhoto = async (visitorId) => {
-    if (!photoDataUrl) return null
-    const blob = await (await fetch(photoDataUrl)).blob()
-    const filePath = `${visitorId}.jpg`
+    if (!photoDataUrl) return null;
+    const blob = await (await fetch(photoDataUrl)).blob();
+    const filePath = `${visitorId}.jpg`;
     const { error } = await supabase.storage
-      .from('photos')
-      .upload(filePath, blob, { contentType: 'image/jpeg', upsert: true })
+      .from("photos")
+      .upload(filePath, blob, { contentType: "image/jpeg", upsert: true });
     if (error) {
-      console.error('upload error', error)
-      return null
+      console.error("upload error", error);
+      return null;
     }
-    const { data } = supabase.storage.from('photos').getPublicUrl(filePath)
-    return data?.publicUrl || null
-  }
+    const { data } = supabase.storage.from("photos").getPublicUrl(filePath);
+    return data?.publicUrl || null;
+  };
 
   /** ตรวจความครบถ้วน (คำนึงถึงช่องที่เปิดใช้งานอยู่จริง) */
   const validateForm = () => {
-    const _errors = {}
+    const _errors = {};
     Object.entries(REQUIRED_FIELDS).forEach(([key, required]) => {
-      if (!required) return
+      if (!required) return;
       if (fields[key]) {
-        const val = (form[key] ?? '').toString().trim()
-        if (!val) _errors[key] = `กรุณากรอก ${labelOf(key)}`
+        const val = (form[key] ?? "").toString().trim();
+        if (!val) _errors[key] = `กรุณากรอก ${labelOf(key)}`;
         // rule เพิ่มเติมตามต้องการ
-        if (key === 'id_number' && val && val.length < 6)
-          _errors[key] = 'หมายเลขบัตรควรมีอย่างน้อย 6 หลัก'
-        if (key === 'phone' && val && !/^\d{9,10}$/.test(val))
-          _errors[key] = 'กรุณากรอกเบอร์โทรให้ถูกต้อง (9–10 หลัก)'
+        if (key === "id_number" && val && val.length < 6)
+          _errors[key] = "หมายเลขบัตรควรมีอย่างน้อย 6 หลัก";
+        if (key === "phone" && val && !/^\d{9,10}$/.test(val))
+          _errors[key] = "กรุณากรอกเบอร์โทรให้ถูกต้อง (9–10 หลัก)";
       }
-    })
+    });
 
-    setErrors(_errors)
+    setErrors(_errors);
     if (Object.keys(_errors).length) {
-      const firstKey = Object.keys(_errors)[0]
-      const el = document.querySelector(`[data-field="${firstKey}"]`)
+      const firstKey = Object.keys(_errors)[0];
+      const el = document.querySelector(`[data-field="${firstKey}"]`);
       if (el) {
-        firstErrorRef.current = el
-        setTimeout(() => el.focus({ preventScroll: false }), 0)
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        firstErrorRef.current = el;
+        setTimeout(() => el.focus({ preventScroll: false }), 0);
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
       }
-      return false
+      return false;
     }
-    return true
-  }
+    return true;
+  };
 
   const onSubmit = async (e) => {
-    e.preventDefault()
-    if (!validateForm()) return
+    e.preventDefault();
+    if (!validateForm()) return;
 
-    setLoading(true)
+    setLoading(true);
     try {
       // QR ชั่วคราวก่อนมี id
       const payload = {
         full_name: form.full_name,
         id_number: form.id_number,
         time: new Date().toISOString(),
-      }
-      const qrTemp = await QRCode.toDataURL(JSON.stringify(payload))
+      };
+      const qrTemp = await QRCode.toDataURL(JSON.stringify(payload));
 
       const { data, error } = await supabase
-        .from('visitors')
+        .from("visitors")
         .insert({
-          ...form,
+          id_type: form.id_type,
+          id_number: form.id_number,
+          full_name: form.full_name,
+          gender: form.gender,
+          company: form.company,
+          phone: form.phone,
+          contact_person: form.contact_person,
+          purpose: form.purpose,
+          other_purpose: form.otherPurpose || null, // ✅ map ค่าไปที่ DB
+          vehicle_plate: form.vehicle_plate,
+          vehicle_type: form.vehicle_type,
+          chip_serial: form.chip_serial,
+          note: form.note,
           checkin_time: new Date().toISOString(),
           photo_url: null,
           qr_data: qrTemp,
         })
         .select()
-        .single()
+        .single();
 
-      if (error) throw error
+      if (error) throw error;
 
-      const photoUrl = await uploadPhoto(data.id)
+      const photoUrl = await uploadPhoto(data.id);
       if (photoUrl) {
-        await supabase.from('visitors').update({ photo_url: photoUrl }).eq('id', data.id)
+        await supabase
+          .from("visitors")
+          .update({ photo_url: photoUrl })
+          .eq("id", data.id);
       }
 
       // อัปเดต QR ให้มี id จริง
@@ -218,48 +236,54 @@ export default function App() {
           id_number: form.id_number,
           time: new Date().toISOString(),
         })
-      )
-      await supabase.from('visitors').update({ qr_data: qrFinal }).eq('id', data.id)
+      );
+      await supabase
+        .from("visitors")
+        .update({ qr_data: qrFinal })
+        .eq("id", data.id);
 
-      setForm((prev) => ({
-        ...prev,
-        id_number: '',
-        full_name: '',
-        phone: '',
-        company: '',
-        purpose: '',
-        vehicle_plate: '',
-        vehicle_type: '',
-        contact_person: '',
-        chip_serial: '',
-        note: '',
-        gender: '',
-      }))
-      setPhotoDataUrl('')
-      setErrors({})
-      await loadVisitors()
-      window.open(`/print/${data.id}`, '_blank')
+      setForm({
+        id_type: "citizen",
+        id_number: "",
+        full_name: "",
+        gender: "",
+        company: "",
+        phone: "",
+        contact_person: "",
+        purpose: "",
+        otherPurpose: "", // ✅ reset ค่า
+        vehicle_plate: "",
+        vehicle_type: "",
+        chip_serial: "",
+        note: "",
+      });
+
+      setPhotoDataUrl("");
+      setErrors({});
+      await loadVisitors();
+      window.open(`/print/${data.id}`, "_blank");
     } catch (err) {
-      alert('บันทึกไม่สำเร็จ: ' + err.message)
+      alert("บันทึกไม่สำเร็จ: " + err.message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const checkOut = async (id) => {
     await supabase
-      .from('visitors')
+      .from("visitors")
       .update({ checkout_time: new Date().toISOString() })
-      .eq('id', id)
-    loadVisitors()
-  }
+      .eq("id", id);
+    loadVisitors();
+  };
 
-  const toggleField = (key) => setFields((prev) => ({ ...prev, [key]: !prev[key] }))
+  const toggleField = (key) =>
+    setFields((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const closeGuide = (dontShowAgain = false) => {
-    setShowGuide(false)
-    if (dontShowAgain) localStorage.setItem('vms_hide_guide', '1')
-  }
+    setShowGuide(false);
+    if (dontShowAgain) localStorage.setItem("vms_hide_guide", "1");
+  };
 
   return (
     <div className="container">
@@ -286,7 +310,7 @@ export default function App() {
         <button
           type="button"
           className="btn outline"
-          style={{ marginLeft: 'auto' }}
+          style={{ marginLeft: "auto" }}
           onClick={() => setShowGuide(true)}
         >
           📘 ไกด์ก่อนลงทะเบียน
@@ -303,16 +327,20 @@ export default function App() {
                 <label>ประเภทบัตร</label>
                 <select
                   data-field="id_type"
-                  className={errors.id_type ? 'input error' : 'input'}
+                  className={errors.id_type ? "input error" : "input"}
                   aria-invalid={!!errors.id_type}
                   value={form.id_type}
-                  onChange={(e) => setForm((f) => ({ ...f, id_type: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, id_type: e.target.value }))
+                  }
                 >
                   <option value="citizen">บัตรประชาชน</option>
                   <option value="driver">ใบขับขี่</option>
                   <option value="other">อื่น ๆ</option>
                 </select>
-                {errors.id_type && <small className="error-text">{errors.id_type}</small>}
+                {errors.id_type && (
+                  <small className="error-text">{errors.id_type}</small>
+                )}
               </>
             )}
 
@@ -322,9 +350,11 @@ export default function App() {
                 <input
                   data-field="id_number"
                   aria-invalid={!!errors.id_number}
-                  className={errors.id_number ? 'input error' : 'input'}
+                  className={errors.id_number ? "input error" : "input"}
                   value={form.id_number}
-                  onChange={(e) => setForm((f) => ({ ...f, id_number: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, id_number: e.target.value }))
+                  }
                 />
                 {errors.id_number && (
                   <small className="error-text">{errors.id_number}</small>
@@ -338,9 +368,11 @@ export default function App() {
                 <input
                   data-field="full_name"
                   aria-invalid={!!errors.full_name}
-                  className={errors.full_name ? 'input error' : 'input'}
+                  className={errors.full_name ? "input error" : "input"}
                   value={form.full_name}
-                  onChange={(e) => setForm((f) => ({ ...f, full_name: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, full_name: e.target.value }))
+                  }
                 />
                 {errors.full_name && (
                   <small className="error-text">{errors.full_name}</small>
@@ -354,16 +386,20 @@ export default function App() {
                 <select
                   data-field="gender"
                   aria-invalid={!!errors.gender}
-                  className={errors.gender ? 'input error' : 'input'}
+                  className={errors.gender ? "input error" : "input"}
                   value={form.gender}
-                  onChange={(e) => setForm((f) => ({ ...f, gender: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, gender: e.target.value }))
+                  }
                 >
                   <option value="">-</option>
                   <option value="ชาย">ชาย</option>
                   <option value="หญิง">หญิง</option>
                   <option value="อื่น ๆ">อื่น ๆ</option>
                 </select>
-                {errors.gender && <small className="error-text">{errors.gender}</small>}
+                {errors.gender && (
+                  <small className="error-text">{errors.gender}</small>
+                )}
               </>
             )}
 
@@ -374,9 +410,11 @@ export default function App() {
                   <input
                     data-field="company"
                     aria-invalid={!!errors.company}
-                    className={errors.company ? 'input error' : 'input'}
+                    className={errors.company ? "input error" : "input"}
                     value={form.company}
-                    onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, company: e.target.value }))
+                    }
                   />
                   {errors.company && (
                     <small className="error-text">{errors.company}</small>
@@ -389,11 +427,15 @@ export default function App() {
                   <input
                     data-field="phone"
                     aria-invalid={!!errors.phone}
-                    className={errors.phone ? 'input error' : 'input'}
+                    className={errors.phone ? "input error" : "input"}
                     value={form.phone}
-                    onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, phone: e.target.value }))
+                    }
                   />
-                  {errors.phone && <small className="error-text">{errors.phone}</small>}
+                  {errors.phone && (
+                    <small className="error-text">{errors.phone}</small>
+                  )}
                 </div>
               )}
             </div>
@@ -405,52 +447,57 @@ export default function App() {
                   <input
                     data-field="contact_person"
                     aria-invalid={!!errors.contact_person}
-                    className={errors.contact_person ? 'input error' : 'input'}
+                    className={errors.contact_person ? "input error" : "input"}
                     value={form.contact_person}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, contact_person: e.target.value }))
                     }
                   />
                   {errors.contact_person && (
-                    <small className="error-text">{errors.contact_person}</small>
+                    <small className="error-text">
+                      {errors.contact_person}
+                    </small>
                   )}
                 </div>
               )}
               {fields.purpose && (
-             <div style={{ flex: 1 }}>
-  <label>วัตถุประสงค์</label>
-  <select
-    data-field="purpose"
-    aria-invalid={!!errors.purpose}
-    className={errors.purpose ? 'input error' : 'input'}
-    value={form.purpose}
-    onChange={(e) => setForm((f) => ({ ...f, purpose: e.target.value }))}
-  >
-    <option value="">-- เลือกวัตถุประสงค์ --</option>
-    <option value="meeting">ประชุมงาน</option>
-    <option value="delivery">ส่งของ</option>
-    <option value="maintenance">ซ่อมบำรุง</option>
-    <option value="visit">เยี่ยมชม</option>
-    <option value="interview">สมัครงาน/สัมภาษณ์</option>
-    <option value="other">อื่น ๆ</option>
-  </select> <br />
-
-  {/* แสดง input เมื่อเลือก "อื่น ๆ" */}
-  {form.purpose === "other" && (
-    <input
-      type="text"
-      placeholder="โปรดระบุวัตถุประสงค์"
-      className="input"
-      value={form.otherPurpose || ""}
-      onChange={(e) => setForm((f) => ({ ...f, otherPurpose: e.target.value }))}
-    />
-  )}
-
-  {errors.purpose && (
-    <small className="error-text">{errors.purpose}</small>
-  )}
-</div>
-
+                <div style={{ flex: 1 }}>
+                  <label>วัตถุประสงค์</label>
+                  <select
+                    data-field="purpose"
+                    aria-invalid={!!errors.purpose}
+                    className={errors.purpose ? "input error" : "input"}
+                    value={form.purpose}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, purpose: e.target.value }))
+                    }
+                  >
+                    <option value="">-- เลือกวัตถุประสงค์ --</option>
+                    <option value="meeting">ประชุมงาน</option>
+                    <option value="delivery">ส่งของ</option>
+                    <option value="maintenance">ซ่อมบำรุง</option>
+                    <option value="visit">เยี่ยมชม</option>
+                    <option value="interview">สมัครงาน/สัมภาษณ์</option>
+                    <option value="other">อื่น ๆ</option>
+                  </select>{" "}
+                  <br />
+                  {/* แสดง input เมื่อเลือก "อื่น ๆ" */}
+                  {form.purpose === "other" && (
+                    <input
+                      style={{ marginTop: 8 }}
+                      type="text"
+                      placeholder="โปรดระบุวัตถุประสงค์"
+                      className="input"
+                      value={form.otherPurpose || ""}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, otherPurpose: e.target.value }))
+                      }
+                    />
+                  )}
+                  {errors.purpose && (
+                    <small className="error-text">{errors.purpose}</small>
+                  )}
+                </div>
               )}
             </div>
 
@@ -461,7 +508,7 @@ export default function App() {
                   <input
                     data-field="vehicle_plate"
                     aria-invalid={!!errors.vehicle_plate}
-                    className={errors.vehicle_plate ? 'input error' : 'input'}
+                    className={errors.vehicle_plate ? "input error" : "input"}
                     value={form.vehicle_plate}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, vehicle_plate: e.target.value }))
@@ -478,7 +525,7 @@ export default function App() {
                   <input
                     data-field="vehicle_type"
                     aria-invalid={!!errors.vehicle_type}
-                    className={errors.vehicle_type ? 'input error' : 'input'}
+                    className={errors.vehicle_type ? "input error" : "input"}
                     value={form.vehicle_type}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, vehicle_type: e.target.value }))
@@ -498,7 +545,7 @@ export default function App() {
                   <input
                     data-field="chip_serial"
                     aria-invalid={!!errors.chip_serial}
-                    className={errors.chip_serial ? 'input error' : 'input'}
+                    className={errors.chip_serial ? "input error" : "input"}
                     value={form.chip_serial}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, chip_serial: e.target.value }))
@@ -515,11 +562,15 @@ export default function App() {
                   <input
                     data-field="note"
                     aria-invalid={!!errors.note}
-                    className={errors.note ? 'input error' : 'input'}
+                    className={errors.note ? "input error" : "input"}
                     value={form.note}
-                    onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, note: e.target.value }))
+                    }
                   />
-                  {errors.note && <small className="error-text">{errors.note}</small>}
+                  {errors.note && (
+                    <small className="error-text">{errors.note}</small>
+                  )}
                 </div>
               )}
             </div>
@@ -534,18 +585,20 @@ export default function App() {
                   style={{
                     width: 220,
                     height: 160,
-                    background: '#000',
+                    background: "#000",
                     borderRadius: 12,
                   }}
                 />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                >
                   <button type="button" className="btn" onClick={takeSnapshot}>
                     ถ่ายภาพ
                   </button>
                   <button
                     type="button"
                     className="btn outline"
-                    onClick={() => setPhotoDataUrl('')}
+                    onClick={() => setPhotoDataUrl("")}
                   >
                     ลบรูป
                   </button>
@@ -555,9 +608,9 @@ export default function App() {
                       style={{
                         width: 220,
                         height: 160,
-                        objectFit: 'cover',
+                        objectFit: "cover",
                         borderRadius: 12,
-                        border: '1px solid #ddd',
+                        border: "1px solid #ddd",
                       }}
                     />
                   )}
@@ -567,7 +620,7 @@ export default function App() {
 
             <div style={{ marginTop: 14 }}>
               <button className="btn" disabled={loading}>
-                {loading ? 'กำลังบันทึก...' : 'บันทึก & ปริ้นสลิป'}
+                {loading ? "กำลังบันทึก..." : "บันทึก & ปริ้นสลิป"}
               </button>
             </div>
           </form>
@@ -577,17 +630,32 @@ export default function App() {
         <div className="card">
           <h2>ตั้งค่าฟอร์ม (เปิด/ปิดช่องกรอก)</h2>
           <div className="row" style={{ gap: 12 }}>
-            {Object.keys(fields).map(k => (
-  <label key={k} style={{display:'flex', alignItems:'center', gap:8, border:'1px solid #eee', padding:6, borderRadius:10}}>
-    <input type="checkbox" checked={fields[k]} onChange={()=>toggleField(k)} />
-     <span>{labelOf(k)}</span>
+            {Object.keys(fields).map((k) => (
+              <label
+                key={k}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  border: "1px solid #eee",
+                  padding: 6,
+                  borderRadius: 10,
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={fields[k]}
+                  onChange={() => toggleField(k)}
+                />
+                <span>{labelOf(k)}</span>
               </label>
             ))}
           </div>
 
           <div style={{ marginTop: 14 }}>
             <p className="badge">
-              เคล็ดลับ: ปรับช่องที่ต้องใช้ให้ตรงนโยบาย เช่น ถ้าไม่ต้องการเก็บเพศ/เลขชิป ก็ปิดได้
+              เคล็ดลับ: ปรับช่องที่ต้องใช้ให้ตรงนโยบาย เช่น
+              ถ้าไม่ต้องการเก็บเพศ/เลขชิป ก็ปิดได้
             </p>
           </div>
         </div>
@@ -650,7 +718,9 @@ export default function App() {
             <ol className="guide">
               <li>ตรวจบัตรประชาชน/เอกสารก่อน (เลขต้องอ่านชัด)</li>
               <li>ถ่ายภาพหน้าผู้มาติดต่อให้เห็นใบหน้าเต็ม</li>
-              <li>กรอก: ชื่อ-สกุล, เบอร์โทร, ผู้ติดต่อภายใน, วัตถุประสงค์ ให้ครบ</li>
+              <li>
+                กรอก: ชื่อ-สกุล, เบอร์โทร, ผู้ติดต่อภายใน, วัตถุประสงค์ ให้ครบ
+              </li>
               <li>หากใช้รถ ให้กรอกทะเบียน/ประเภทรถ</li>
               <li>ตรวจทานข้อมูลอีกครั้งก่อนกด “บันทึก & ปริ้นสลิป”</li>
             </ol>
@@ -667,5 +737,5 @@ export default function App() {
         </div>
       )}
     </div>
-  )
+  );
 }

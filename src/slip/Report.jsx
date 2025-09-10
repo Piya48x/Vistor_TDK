@@ -5,17 +5,36 @@ import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
 import { useNavigate } from 'react-router-dom'
 
+// กำหนด user/pass แบบง่าย
+const USERNAME = '1234'
+const PASSWORD = '1234'
+
 const ORG = import.meta.env.VITE_ORG_NAME || 'Just-iD Visitor'
 const SITE = import.meta.env.VITE_SITE_NAME || 'Global Securitech'
 
 export default function Report() {
-  const [fields, setFields] = useState(DEFAULT_FIELDS)
   const [visitors, setVisitors] = useState([])
   const [searchDate, setSearchDate] = useState('')
   const [searchName, setSearchName] = useState('')
   const [selectedIds, setSelectedIds] = useState([])
   const printedIdsRef = useRef(new Set())
   const navigate = useNavigate()
+
+  const hasPromptedRef = useRef(false) // ✅ flag กันรันซ้ำ
+
+  // Prompt login ทุกครั้งที่เข้าหน้า (ครั้งเดียวจริง ๆ)
+  useEffect(() => {
+    if (hasPromptedRef.current) return
+    hasPromptedRef.current = true
+
+    const user = prompt('กรอก Username:')
+    const pass = prompt('กรอก Password:')
+
+    if (!(user === USERNAME && pass === PASSWORD)) {
+      alert('❌ Username หรือ Password ไม่ถูกต้อง')
+      navigate('/') // กลับหน้าแรก
+    }
+  }, [navigate])
 
   // Load visitors
   const loadVisitors = async (dateFilter = '', nameFilter = '') => {
