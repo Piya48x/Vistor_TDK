@@ -6,12 +6,14 @@ import App from './App.jsx'
 import PrintSlip from './slip/PrintSlip.jsx'
 import './styles.css'
 import Report from './slip/Report.jsx'
+import Modal from './slip/Modal.jsx'
 
 
 const router = createBrowserRouter([
   { path: '/', element: <App /> },
   { path: '/print/:id', element: <PrintSlip /> },
   { path: '/Report', element: <Report /> },
+  { path: '/Modal', element: <Modal /> },
 
 ])
 

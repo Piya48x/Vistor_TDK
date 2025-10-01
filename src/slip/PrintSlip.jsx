@@ -1,38 +1,40 @@
-import React, { useEffect, useState, useRef } from "react";
-import { useParams, useLocation } from "react-router-dom"; // เพิ่ม useLocation
-import { supabase } from "../supabaseClient";
+import React, { useEffect, useState, useRef } from "react"
+import { useParams } from "react-router-dom"
+import { supabase } from "../supabaseClient"
 
-const ORG = import.meta.env.VITE_ORG_NAME || "Just-iD Visitor";
-const SITE = import.meta.env.VITE_SITE_NAME || "Global Securitech";
-const LOGO_URL = import.meta.env.VITE_LOGO_URL || "/logo/f.png"; // ใส่ path logo ของคุณ
+const ORG = import.meta.env.VITE_ORG_NAME || "Just-iD Visitor"
+const SITE = import.meta.env.VITE_SITE_NAME || "Global Securitech"
+const LOGO_URL = import.meta.env.VITE_LOGO_URL || "/logo/f.png"
 
-export default function PrintSlip() {
-  const { id } = useParams();
-  const location = useLocation(); // ใช้ location จาก react-router
-  const [v, setV] = useState(null);
-  const printedRef = useRef(false); // กันไม่ให้ print ซ้ำ
+export default function PrintSlip({ id: propId, inModal = false }) {
+  const { id: routeId } = useParams()
+  const id = propId || routeId
+  const [v, setV] = useState(null)
+  const printedRef = useRef(false)
 
   useEffect(() => {
-    (async () => {
+    if (!id) return
+    ;(async () => {
       const { data, error } = await supabase
         .from("visitors")
         .select("*")
         .eq("id", id)
-        .single();
+        .single()
 
       if (!error) {
-        setV(data);
-
-        // รอ DOM render แล้วค่อยปริ้น
-        setTimeout(() => {
-          if (!printedRef.current) {
-            window.print();
-            printedRef.current = true;
-          }
-        }, 500);
+        setV(data)
+        if (!inModal) {
+          // auto print เฉพาะเวลาเข้าผ่าน route
+          setTimeout(() => {
+            if (!printedRef.current) {
+              window.print()
+              printedRef.current = true
+            }
+          }, 500)
+        }
       }
-    })();
-  }, [id]);
+    })()
+  }, [id, inModal])
 
   function translatePurpose(purpose, otherPurpose) {
     const dict = {
@@ -42,12 +44,12 @@ export default function PrintSlip() {
       visit: "เยี่ยมชม",
       interview: "สมัครงาน/สัมภาษณ์",
       other: otherPurpose || "อื่น ๆ",
-    };
-    return dict[purpose] || purpose;
+    }
+    return dict[purpose] || purpose
   }
 
   function formatDate(dateString) {
-    if (!dateString) return "";
+    if (!dateString) return ""
     return new Intl.DateTimeFormat("th-TH", {
       day: "2-digit",
       month: "2-digit",
@@ -56,10 +58,10 @@ export default function PrintSlip() {
       minute: "2-digit",
       second: "2-digit",
       hour12: false,
-    }).format(new Date(dateString));
+    }).format(new Date(dateString))
   }
 
-  if (!v) return <div style={{ padding: 40 }}>กำลังโหลด...</div>;
+  if (!v) return <div style={{ padding: 40 }}>กำลังโหลด...</div>
 
   return (
     <div
@@ -75,9 +77,7 @@ export default function PrintSlip() {
       }}
     >
       {/* Logo */}
-      <div
-        style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}
-      >
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
         <img src={LOGO_URL} alt="logo" style={{ width: 100, height: "auto" }} />
       </div>
 
@@ -122,15 +122,13 @@ export default function PrintSlip() {
             <b>ประสงค์:</b> {translatePurpose(v.purpose, v.other_purpose)}
           </div>
         )}
-
         <div>
           <b>เวลาเข้า:</b> {formatDate(v.checkin_time)}
         </div>
         <br />
         <br />
         <div>
-          <b>เวลาออก:</b>{" "}
-          {formatDate(v.checkout_time) || "................................"}
+          <b>เวลาออก:</b> {formatDate(v.checkout_time) || "................................"}
         </div>
       </div>
 
@@ -138,18 +136,14 @@ export default function PrintSlip() {
 
       {/* QR Code */}
       {v.qr_data && (
-        <div
-          style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}
-        >
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
           <img src={v.qr_data} alt="qr" style={{ width: 120, height: 120 }} />
         </div>
       )}
 
       {/* Photo */}
       {v.photo_url && (
-        <div
-          style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}
-        >
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
           <img
             src={v.photo_url}
             alt="photo"
@@ -181,9 +175,7 @@ export default function PrintSlip() {
             marginBottom: 4,
           }}
         ></div>
-        <div style={{ fontSize: 12, textAlign: "center" }}>
-          (ลงชื่อผู้ได้รับการติดต่อ)
-        </div>
+        <div style={{ fontSize: 12, textAlign: "center" }}>(ลงชื่อผู้ได้รับการติดต่อ)</div>
       </div>
 
       {/* Footer Note */}
@@ -192,5 +184,5 @@ export default function PrintSlip() {
         โปรดปฏิบัติตามนโยบายความปลอดภัยของหน่วยงาน
       </div>
     </div>
-  );
+  )
 }

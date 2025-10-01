@@ -67,6 +67,10 @@ export default function App() {
   // validate & guide states
   const [errors, setErrors] = useState({});
   const firstErrorRef = useRef(null);
+  const [showSuggest, setShowSuggest] = useState(false);
+
+  
+
 
   const [showGuide, setShowGuide] = useState(
     () => localStorage.getItem("vms_hide_guide") !== "1"
@@ -74,6 +78,15 @@ export default function App() {
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const [recentVisitors, setRecentVisitors] = useState([])
+
+  
+  
+
+useEffect(() => {
+  const saved = JSON.parse(localStorage.getItem("recent_visitors") || "[]")
+  setRecentVisitors(saved)
+}, [])
 
   // Init webcam
   useEffect(() => {
@@ -182,92 +195,123 @@ export default function App() {
     return true;
   };
 
-  const onSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
+const onSubmit = async (e) => {
+  e.preventDefault();
+  if (!validateForm()) return;
 
-    setLoading(true);
-    try {
-      // QR ชั่วคราวก่อนมี id
-      const payload = {
-        full_name: form.full_name,
+    // ✅ ถ้าไม่มีรูป ห้ามบันทึก
+  if (!photoDataUrl) {
+    alert("กรุณาถ่ายภาพ บัตรประชาชน/ใบขับขี่ ก่อนบันทึกสลิป (เฉพาะด้านหน้าบัตร)");
+    return;
+  }
+
+  setLoading(true);
+  try {
+    // QR ชั่วคราวก่อนมี id
+    const payload = {
+      full_name: form.full_name,
+      id_number: form.id_number,
+      time: new Date().toISOString(),
+    };
+    const qrTemp = await QRCode.toDataURL(JSON.stringify(payload));
+
+    const { data, error } = await supabase
+      .from("visitors")
+      .insert({
+        id_type: form.id_type,
         id_number: form.id_number,
-        time: new Date().toISOString(),
-      };
-      const qrTemp = await QRCode.toDataURL(JSON.stringify(payload));
+        full_name: form.full_name,
+        gender: form.gender,
+        company: form.company,
+        phone: form.phone,
+        contact_person: form.contact_person,
+        purpose: form.purpose,
+        other_purpose: form.otherPurpose || null, // ✅ map ค่าไปที่ DB
+        vehicle_plate: form.vehicle_plate,
+        vehicle_type: form.vehicle_type,
+        chip_serial: form.chip_serial,
+        note: form.note,
+        checkin_time: new Date().toISOString(),
+        photo_url: null,
+        qr_data: qrTemp,
+      })
+      .select()
+      .single();
 
-      const { data, error } = await supabase
-        .from("visitors")
-        .insert({
-          id_type: form.id_type,
-          id_number: form.id_number,
-          full_name: form.full_name,
-          gender: form.gender,
-          company: form.company,
-          phone: form.phone,
-          contact_person: form.contact_person,
-          purpose: form.purpose,
-          other_purpose: form.otherPurpose || null, // ✅ map ค่าไปที่ DB
-          vehicle_plate: form.vehicle_plate,
-          vehicle_type: form.vehicle_type,
-          chip_serial: form.chip_serial,
-          note: form.note,
-          checkin_time: new Date().toISOString(),
-          photo_url: null,
-          qr_data: qrTemp,
-        })
-        .select()
-        .single();
+    if (error) throw error;
 
-      if (error) throw error;
-
-      const photoUrl = await uploadPhoto(data.id);
-      if (photoUrl) {
-        await supabase
-          .from("visitors")
-          .update({ photo_url: photoUrl })
-          .eq("id", data.id);
-      }
-
-      // อัปเดต QR ให้มี id จริง
-      const qrFinal = await QRCode.toDataURL(
-        JSON.stringify({
-          id: data.id,
-          id_number: form.id_number,
-          time: new Date().toISOString(),
-        })
-      );
+    // ✅ Upload รูปถ่าย
+    const photoUrl = await uploadPhoto(data.id);
+    if (photoUrl) {
       await supabase
         .from("visitors")
-        .update({ qr_data: qrFinal })
+        .update({ photo_url: photoUrl })
         .eq("id", data.id);
-
-      setForm({
-        id_type: "citizen",
-        id_number: "",
-        full_name: "",
-        gender: "",
-        company: "",
-        phone: "",
-        contact_person: "",
-        purpose: "",
-        otherPurpose: "", // ✅ reset ค่า
-        vehicle_plate: "",
-        vehicle_type: "",
-        chip_serial: "",
-        note: "",
-      });
-
-      setPhotoDataUrl("");
-      setErrors({});
-      await loadVisitors();
-      window.open(`/print/${data.id}`, "_blank");
-    } catch (err) {
-      alert("บันทึกไม่สำเร็จ: " + err.message);
-    } finally {
-      setLoading(false);
     }
-  };
+
+    // ✅ อัปเดต QR ให้มี id จริง
+    const qrFinal = await QRCode.toDataURL(
+      JSON.stringify({
+        id: data.id,
+        id_number: form.id_number,
+        time: new Date().toISOString(),
+      })
+    );
+    await supabase
+      .from("visitors")
+      .update({ qr_data: qrFinal })
+      .eq("id", data.id);
+
+    // ✅ บันทึกข้อมูลคนที่ลงทะเบียนไว้ใน localStorage
+    let savedVisitors = JSON.parse(localStorage.getItem("recent_visitors") || "[]");
+
+    // เก็บทั้ง object form (จะได้ auto-fill ได้หลาย field ไม่ใช่แค่ชื่อ)
+    const visitorData = {
+      full_name: form.full_name,
+      phone: form.phone,
+      company: form.company,
+      contact_person: form.contact_person,
+      purpose: form.purpose,
+      other_purpose: form.otherPurpose || "",
+    };
+
+    // ตรวจซ้ำตามชื่อ
+    const exists = savedVisitors.find((v) => v.full_name === visitorData.full_name);
+    if (!exists) {
+      savedVisitors.push(visitorData);
+      localStorage.setItem("recent_visitors", JSON.stringify(savedVisitors));
+    }
+
+    // ✅ reset form หลังบันทึก
+    setForm({
+      id_type: "citizen",
+      id_number: "",
+      full_name: "",
+      gender: "",
+      company: "",
+      phone: "",
+      contact_person: "",
+      purpose: "",
+      otherPurpose: "", // reset ค่า
+      vehicle_plate: "",
+      vehicle_type: "",
+      chip_serial: "",
+      note: "",
+    });
+
+    setPhotoDataUrl("");
+    setErrors({});
+    await loadVisitors();
+
+    // ✅ เปิดสลิปพิมพ์
+    window.open(`/print/${data.id}`, "_blank");
+  } catch (err) {
+    alert("บันทึกไม่สำเร็จ: " + err.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const checkOut = async (id) => {
     await supabase
@@ -322,6 +366,33 @@ export default function App() {
         <div className="card">
           <h2>ลงทะเบียนผู้มาติดต่อ (Check-in)</h2>
           <form onSubmit={onSubmit}>
+             {/* {recentVisitors.length > 0 && (
+    <div style={{ marginBottom: 8 }}>
+      <label>เลือกผู้มาติดต่อที่เคยลงทะเบียน</label>
+      <select
+        onChange={(e) => {
+          const name = e.target.value
+          if (name) {
+            // หา object visitor ที่เคยบันทึกไว้
+            const selected = recentVisitors.find(v => v.full_name === name)
+            if (selected) {
+              setForm((f) => ({
+                ...f,
+                ...selected, // ✅ เติมค่า field ที่เคยลงไว้
+              }))
+            }
+          }
+        }}
+      >
+        <option value="">-- เลือกชื่อ --</option>
+        {recentVisitors.map((v, i) => (
+          <option key={i} value={v.full_name}>
+            {v.full_name}
+          </option>
+        ))}
+      </select>
+    </div>
+  )} */}
             {fields.id_type && (
               <>
                 <label>ประเภทบัตร</label>
@@ -363,21 +434,71 @@ export default function App() {
             )}
 
             {fields.full_name && (
-              <>
-                <label>ชื่อ-นามสกุล</label>
-                <input
-                  data-field="full_name"
-                  aria-invalid={!!errors.full_name}
-                  className={errors.full_name ? "input error" : "input"}
-                  value={form.full_name}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, full_name: e.target.value }))
-                  }
-                />
-                {errors.full_name && (
-                  <small className="error-text">{errors.full_name}</small>
-                )}
-              </>
+<div style={{ position: "relative" }}>
+  <label>ชื่อ-นามสกุล</label>
+ <input
+  data-field="full_name"
+  aria-invalid={!!errors.full_name}
+  className={errors.full_name ? "input error" : "input"}
+  value={form.full_name}
+  onChange={(e) => {
+    setForm((f) => ({ ...f, full_name: e.target.value }));
+    setShowSuggest(true); // ✅ โชว์ dropdown ทุกครั้งที่พิมพ์
+  }}
+/>
+
+
+{showSuggest && form.full_name && (
+  <ul
+    style={{
+      position: "absolute",
+      top: "100%",
+      left: 0,
+      right: 0,
+      background: "#fff",
+      border: "1px solid #ccc",
+      borderRadius: 4,
+      margin: 0,
+      padding: 0,
+      listStyle: "none",
+      maxHeight: 150,
+      overflowY: "auto",
+      zIndex: 1000,
+    }}
+  >
+    {recentVisitors
+      .filter((v) =>
+        v.full_name.toLowerCase().includes(form.full_name.toLowerCase())
+      )
+      .map((v, i) => (
+        <li
+          key={i}
+          style={{
+            padding: "6px 10px",
+            cursor: "pointer",
+            borderBottom: "1px solid #eee",
+          }}
+          onClick={() => {
+            setForm((f) => ({
+              ...f,
+              ...v, // ✅ autofill ข้อมูลจาก visitor เก่า
+            }));
+            setShowSuggest(false); // ✅ ปิด list ทันที
+          }}
+        >
+          {v.full_name}
+        </li>
+      ))}
+  </ul>
+)}
+
+
+  {errors.full_name && (
+    <small className="error-text">{errors.full_name}</small>
+  )}
+</div>
+
+
             )}
 
             {fields.gender && (

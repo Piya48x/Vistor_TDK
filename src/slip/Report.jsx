@@ -113,65 +113,95 @@ export default function Report() {
     loadVisitors(searchDate, searchName)
   }
 
-  // export excel with photo (aligned per-row)
-  const exportToExcel = async (ids) => {
-    const rows = ids.length ? visitors.filter((v) => ids.includes(v.id)) : visitors
-    if (!rows.length) return alert('กรุณาเลือกรายการก่อน')
+// ฟังก์ชันแปล purpose → ภาษาไทย
+const translatePurpose = (purpose, other_purpose) => {
+  const mapping = {
+    delivery: "ส่งของ",
+    meeting: "ประชุม",
+    interview: "สัมภาษณ์งาน",
+    customer: "ลูกค้า",
+    service: "เข้าซ่อม/บริการ",
+    visit: "เยี่ยมชม",
+  }
 
-    const wb = new ExcelJS.Workbook()
-    const ws = wb.addWorksheet('Visitors')
+  if (purpose === "other") {
+    return other_purpose || "อื่นๆ"
+  }
 
-    ws.columns = [
-      { header: 'ID', key: 'id', width: 12 },
-      { header: 'ชื่อ', key: 'full_name', width: 25 },
-      { header: 'ผู้ติดต่อ', key: 'contact_person', width: 25 },
-      { header: 'เวลาเข้า', key: 'checkin_time', width: 22 },
-      { header: 'เวลาออก', key: 'checkout_time', width: 22 },
-      { header: 'รูปถ่าย', key: 'photo', width: 18 }, // photo column
-    ]
+  return mapping[purpose] || purpose || ""
+}
 
-    // Header style + freeze + autofilter
-    ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
-    ws.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' }
-    ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E40AF' } }
-    ws.views = [{ state: 'frozen', xSplit: 0, ySplit: 1 }]
-    ws.autoFilter = 'A1:F1'
+// export excel with photo (aligned per-row)
+const exportToExcel = async (ids) => {
+  const rows = ids.length ? visitors.filter((v) => ids.includes(v.id)) : visitors
+  if (!rows.length) return alert('กรุณาเลือกรายการก่อน')
 
-    const PHOTO_COL_LETTER = 'F' // 6th column
+  const wb = new ExcelJS.Workbook()
+  const ws = wb.addWorksheet('Visitors')
 
-    for (const v of rows) {
-      const row = ws.addRow({
-        id: String(v.id).padStart(10, '0'),
-        full_name: v.full_name || '',
-        contact_person: v.contact_person || '',
-        checkin_time: v.checkin_time ? new Date(v.checkin_time).toLocaleString() : '',
-        checkout_time: v.checkout_time ? new Date(v.checkout_time).toLocaleString() : '',
-        photo: ''
-      })
+  ws.columns = [
+    { header: 'ID', key: 'id', width: 12 },
+    { header: 'ชื่อ', key: 'full_name', width: 25 },
+    { header: 'เพศ', key: 'gender', width: 10 },
+    { header: 'ติดต่อ', key: 'contact_person', width: 20 },
+    { header: 'บริษัท', key: 'company', width: 20 },
+    { header: 'ทะเบียนรถ', key: 'vehicle_plate', width: 15 },
+    { header: 'ประสงค์', key: 'purpose', width: 25 },
+    { header: 'เวลาเข้า', key: 'checkin_time', width: 22 },
+    { header: 'เวลาออก', key: 'checkout_time', width: 22 },
+    { header: 'รูปถ่าย', key: 'photo', width: 18 }, // photo column
+  ]
 
-      // Make each data row tall enough for the image
-      row.height = 48 // points (~64px). Adjust if needed
+  // Header style + freeze + autofilter
+  ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
+  ws.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' }
+  ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E40AF' } }
+  ws.views = [{ state: 'frozen', ySplit: 1 }]
+  ws.autoFilter = 'A1:J1'
 
-      if (v.photo_url) {
-        try {
-          const res = await fetch(v.photo_url)
-          const buf = await res.arrayBuffer()
-          const ct = res.headers.get('content-type') || ''
-          const ext = ct.includes('png') ? 'png' : 'jpeg'
-          const imgId = wb.addImage({ buffer: buf, extension: ext })
+  const PHOTO_COL_LETTER = 'J' // ✅ รูปอยู่คอลัมน์ที่ 10
 
-          // Place image exactly inside its row's photo cell (fit-to-cell)
-          const cellRef = `${PHOTO_COL_LETTER}${row.number}:${PHOTO_COL_LETTER}${row.number}`
-          ws.addImage(imgId, cellRef)
-        } catch (err) {
-          console.warn('ไม่สามารถโหลดรูป', v.photo_url, err)
-        }
+  for (const v of rows) {
+    const row = ws.addRow({
+      id: String(v.id).padStart(10, '0'),
+      full_name: v.full_name || '',
+      gender: v.gender || '',
+      contact_person: v.contact_person || '',
+      company: v.company || '',
+      vehicle_plate: v.vehicle_plate || '',
+      purpose: translatePurpose(v.purpose, v.other_purpose), // ✅ แปลไทย
+      checkin_time: v.checkin_time ? new Date(v.checkin_time).toLocaleString() : '',
+      checkout_time: v.checkout_time ? new Date(v.checkout_time).toLocaleString() : '',
+      photo: ''
+    })
+
+    row.height = 48 // ให้สูงพอสำหรับรูป
+
+    if (v.photo_url) {
+      try {
+        const res = await fetch(v.photo_url)
+        const buf = await res.arrayBuffer()
+        const ct = res.headers.get('content-type') || ''
+        const ext = ct.includes('png') ? 'png' : 'jpeg'
+        const imgId = wb.addImage({ buffer: buf, extension: ext })
+
+        // ใส่รูปตรงคอลัมน์ J ของ row ปัจจุบัน
+        const cellRef = `${PHOTO_COL_LETTER}${row.number}:${PHOTO_COL_LETTER}${row.number}`
+        ws.addImage(imgId, cellRef)
+      } catch (err) {
+        console.warn('ไม่สามารถโหลดรูป', v.photo_url, err)
       }
     }
-
-    const buf = await wb.xlsx.writeBuffer()
-    saveAs(new Blob([buf], { type: 'application/octet-stream' }), `visitors_${new Date().toISOString().slice(0, 10)}.xlsx`)
   }
+
+  const buf = await wb.xlsx.writeBuffer()
+  saveAs(
+    new Blob([buf], { type: 'application/octet-stream' }),
+    `visitors_${new Date().toISOString().slice(0, 10)}.xlsx`
+  )
+}
+
+
 
   return (
     <div className="container mx-auto p-6 space-y-6"><br />
