@@ -93,7 +93,7 @@ useEffect(() => {
     (async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
+          video: { facingMode: "environment" }, // ✅ ใช้กล้องหลัง
           audio: false,
         });
         streamRef.current = stream;
@@ -697,7 +697,7 @@ const onSubmit = async (e) => {
             </div>
 
             <div style={{ marginTop: 12 }}>
-              <label>ภาพถ่าย</label>
+              <label>ภาพถ่าย (บัตรประชาชน/ใบขับขี่)</label>
               <div className="row">
                 <video
                   ref={videoRef}
