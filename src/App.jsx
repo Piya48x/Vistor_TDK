@@ -70,51 +70,44 @@ export default function App() {
   const [showSuggest, setShowSuggest] = useState(false);
   const [facingMode, setFacingMode] = useState("environment");
 
-  
-
-
   const [showGuide, setShowGuide] = useState(
     () => localStorage.getItem("vms_hide_guide") !== "1"
   );
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
-  const [recentVisitors, setRecentVisitors] = useState([])
+  const [recentVisitors, setRecentVisitors] = useState([]);
 
-  
-  
-
-useEffect(() => {
-  const saved = JSON.parse(localStorage.getItem("recent_visitors") || "[]")
-  setRecentVisitors(saved)
-}, [])
+  useEffect(() => {
+    const saved = JSON.parse(localStorage.getItem("recent_visitors") || "[]");
+    setRecentVisitors(saved);
+  }, []);
 
   // Init webcam
- // Init webcam
-useEffect(() => {
-  (async () => {
-    try {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
+  // Init webcam
+  useEffect(() => {
+    (async () => {
+      try {
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((t) => t.stop());
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode }, // ✅ ใช้ค่า state
+          audio: false,
+        });
+        streamRef.current = stream;
+        if (videoRef.current) videoRef.current.srcObject = stream;
+      } catch (err) {
+        console.warn("camera error", err);
       }
+    })();
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode }, // ✅ ใช้ค่า state
-        audio: false,
-      });
-      streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
-    } catch (err) {
-      console.warn("camera error", err);
-    }
-  })();
-
-  return () => {
-    if (streamRef.current)
-      streamRef.current.getTracks().forEach((t) => t.stop());
-  };
-}, [facingMode]); // ✅ เปลี่ยนกล้องเมื่อ state เปลี่ยน
-
+    return () => {
+      if (streamRef.current)
+        streamRef.current.getTracks().forEach((t) => t.stop());
+    };
+  }, [facingMode]); // ✅ เปลี่ยนกล้องเมื่อ state เปลี่ยน
 
   // Load latest visitors
   const loadVisitors = async () => {
@@ -203,123 +196,128 @@ useEffect(() => {
     return true;
   };
 
-const onSubmit = async (e) => {
-  e.preventDefault();
-  if (!validateForm()) return;
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
 
     // ✅ ถ้าไม่มีรูป ห้ามบันทึก
-  if (!photoDataUrl) {
-    alert("กรุณาถ่ายภาพ บัตรประชาชน/ใบขับขี่ ก่อนบันทึกสลิป (เฉพาะด้านหน้าบัตร)");
-    return;
-  }
-
-  setLoading(true);
-  try {
-    // QR ชั่วคราวก่อนมี id
-    const payload = {
-      full_name: form.full_name,
-      id_number: form.id_number,
-      time: new Date().toISOString(),
-    };
-    const qrTemp = await QRCode.toDataURL(JSON.stringify(payload));
-
-    const { data, error } = await supabase
-      .from("visitors")
-      .insert({
-        id_type: form.id_type,
-        id_number: form.id_number,
-        full_name: form.full_name,
-        gender: form.gender,
-        company: form.company,
-        phone: form.phone,
-        contact_person: form.contact_person,
-        purpose: form.purpose,
-        other_purpose: form.otherPurpose || null, // ✅ map ค่าไปที่ DB
-        vehicle_plate: form.vehicle_plate,
-        vehicle_type: form.vehicle_type,
-        chip_serial: form.chip_serial,
-        note: form.note,
-        checkin_time: new Date().toISOString(),
-        photo_url: null,
-        qr_data: qrTemp,
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    // ✅ Upload รูปถ่าย
-    const photoUrl = await uploadPhoto(data.id);
-    if (photoUrl) {
-      await supabase
-        .from("visitors")
-        .update({ photo_url: photoUrl })
-        .eq("id", data.id);
+    if (!photoDataUrl) {
+      alert(
+        "กรุณาถ่ายภาพ บัตรประชาชน/ใบขับขี่ ก่อนบันทึกสลิป (เฉพาะด้านหน้าบัตร)"
+      );
+      return;
     }
 
-    // ✅ อัปเดต QR ให้มี id จริง
-    const qrFinal = await QRCode.toDataURL(
-      JSON.stringify({
-        id: data.id,
+    setLoading(true);
+    try {
+      // QR ชั่วคราวก่อนมี id
+      const payload = {
+        full_name: form.full_name,
         id_number: form.id_number,
         time: new Date().toISOString(),
-      })
-    );
-    await supabase
-      .from("visitors")
-      .update({ qr_data: qrFinal })
-      .eq("id", data.id);
+      };
+      const qrTemp = await QRCode.toDataURL(JSON.stringify(payload));
 
-    // ✅ บันทึกข้อมูลคนที่ลงทะเบียนไว้ใน localStorage
-    let savedVisitors = JSON.parse(localStorage.getItem("recent_visitors") || "[]");
+      const { data, error } = await supabase
+        .from("visitors")
+        .insert({
+          id_type: form.id_type,
+          id_number: form.id_number,
+          full_name: form.full_name,
+          gender: form.gender,
+          company: form.company,
+          phone: form.phone,
+          contact_person: form.contact_person,
+          purpose: form.purpose,
+          other_purpose: form.otherPurpose || null, // ✅ map ค่าไปที่ DB
+          vehicle_plate: form.vehicle_plate,
+          vehicle_type: form.vehicle_type,
+          chip_serial: form.chip_serial,
+          note: form.note,
+          checkin_time: new Date().toISOString(),
+          photo_url: null,
+          qr_data: qrTemp,
+        })
+        .select()
+        .single();
 
-    // เก็บทั้ง object form (จะได้ auto-fill ได้หลาย field ไม่ใช่แค่ชื่อ)
-    const visitorData = {
-      full_name: form.full_name,
-      phone: form.phone,
-      company: form.company,
-      contact_person: form.contact_person,
-      purpose: form.purpose,
-      other_purpose: form.otherPurpose || "",
-    };
+      if (error) throw error;
 
-    // ตรวจซ้ำตามชื่อ
-    const exists = savedVisitors.find((v) => v.full_name === visitorData.full_name);
-    if (!exists) {
-      savedVisitors.push(visitorData);
-      localStorage.setItem("recent_visitors", JSON.stringify(savedVisitors));
+      // ✅ Upload รูปถ่าย
+      const photoUrl = await uploadPhoto(data.id);
+      if (photoUrl) {
+        await supabase
+          .from("visitors")
+          .update({ photo_url: photoUrl })
+          .eq("id", data.id);
+      }
+
+      // ✅ อัปเดต QR ให้มี id จริง
+      const qrFinal = await QRCode.toDataURL(
+        JSON.stringify({
+          id: data.id,
+          id_number: form.id_number,
+          time: new Date().toISOString(),
+        })
+      );
+      await supabase
+        .from("visitors")
+        .update({ qr_data: qrFinal })
+        .eq("id", data.id);
+
+      // ✅ บันทึกข้อมูลคนที่ลงทะเบียนไว้ใน localStorage
+      let savedVisitors = JSON.parse(
+        localStorage.getItem("recent_visitors") || "[]"
+      );
+
+      // เก็บทั้ง object form (จะได้ auto-fill ได้หลาย field ไม่ใช่แค่ชื่อ)
+      const visitorData = {
+        full_name: form.full_name,
+        phone: form.phone,
+        company: form.company,
+        contact_person: form.contact_person,
+        purpose: form.purpose,
+        other_purpose: form.otherPurpose || "",
+      };
+
+      // ตรวจซ้ำตามชื่อ
+      const exists = savedVisitors.find(
+        (v) => v.full_name === visitorData.full_name
+      );
+      if (!exists) {
+        savedVisitors.push(visitorData);
+        localStorage.setItem("recent_visitors", JSON.stringify(savedVisitors));
+      }
+
+      // ✅ reset form หลังบันทึก
+      setForm({
+        id_type: "citizen",
+        id_number: "",
+        full_name: "",
+        gender: "",
+        company: "",
+        phone: "",
+        contact_person: "",
+        purpose: "",
+        otherPurpose: "", // reset ค่า
+        vehicle_plate: "",
+        vehicle_type: "",
+        chip_serial: "",
+        note: "",
+      });
+
+      setPhotoDataUrl("");
+      setErrors({});
+      await loadVisitors();
+
+      // ✅ เปิดสลิปพิมพ์
+      window.open(`/print/${data.id}`, "_blank");
+    } catch (err) {
+      alert("บันทึกไม่สำเร็จ: " + err.message);
+    } finally {
+      setLoading(false);
     }
-
-    // ✅ reset form หลังบันทึก
-    setForm({
-      id_type: "citizen",
-      id_number: "",
-      full_name: "",
-      gender: "",
-      company: "",
-      phone: "",
-      contact_person: "",
-      purpose: "",
-      otherPurpose: "", // reset ค่า
-      vehicle_plate: "",
-      vehicle_type: "",
-      chip_serial: "",
-      note: "",
-    });
-
-    setPhotoDataUrl("");
-    setErrors({});
-    await loadVisitors();
-
-    // ✅ เปิดสลิปพิมพ์
-    window.open(`/print/${data.id}`, "_blank");
-  } catch (err) {
-    alert("บันทึกไม่สำเร็จ: " + err.message);
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   const checkOut = async (id) => {
     await supabase
@@ -346,7 +344,32 @@ const onSubmit = async (e) => {
         .modal-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.45); display:grid; place-items:center; z-index:9999; }
         .modal{ width:min(680px,92vw); background:#fff; border-radius:16px; padding:20px; box-shadow:0 20px 60px rgba(0,0,0,.25); }
         .modal h3{ margin:0 0 10px; font-size:20px }
-        .guide{ margin:8px 0 0 18px }
+        .guide{ margin:8px 0 0 18px } .btn {
+  padding: 12px;
+  font-size: 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 500;
+}
+.btn.outline {
+  background: #fff;
+  border: 1.5px solid #007bff;
+  color: #007bff;
+}
+.btn.outline:hover {
+  background: #007bff;
+  color: #fff;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .btn {
+    width: 100%;
+    font-size: 18px;
+    padding: 14px;
+  }
+}
+
       `}</style>
 
       <div className="row noprint" style={{ marginBottom: 12 }}>
@@ -374,7 +397,7 @@ const onSubmit = async (e) => {
         <div className="card">
           <h2>ลงทะเบียนผู้มาติดต่อ (Check-in)</h2>
           <form onSubmit={onSubmit}>
-             {/* {recentVisitors.length > 0 && (
+            {/* {recentVisitors.length > 0 && (
     <div style={{ marginBottom: 8 }}>
       <label>เลือกผู้มาติดต่อที่เคยลงทะเบียน</label>
       <select
@@ -442,71 +465,69 @@ const onSubmit = async (e) => {
             )}
 
             {fields.full_name && (
-<div style={{ position: "relative" }}>
-  <label>ชื่อ-นามสกุล</label>
- <input
-  data-field="full_name"
-  aria-invalid={!!errors.full_name}
-  className={errors.full_name ? "input error" : "input"}
-  value={form.full_name}
-  onChange={(e) => {
-    setForm((f) => ({ ...f, full_name: e.target.value }));
-    setShowSuggest(true); // ✅ โชว์ dropdown ทุกครั้งที่พิมพ์
-  }}
-/>
+              <div style={{ position: "relative" }}>
+                <label>ชื่อ-นามสกุล</label>
+                <input
+                  data-field="full_name"
+                  aria-invalid={!!errors.full_name}
+                  className={errors.full_name ? "input error" : "input"}
+                  value={form.full_name}
+                  onChange={(e) => {
+                    setForm((f) => ({ ...f, full_name: e.target.value }));
+                    setShowSuggest(true); // ✅ โชว์ dropdown ทุกครั้งที่พิมพ์
+                  }}
+                />
 
+                {showSuggest && form.full_name && (
+                  <ul
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: 0,
+                      right: 0,
+                      background: "#fff",
+                      border: "1px solid #ccc",
+                      borderRadius: 4,
+                      margin: 0,
+                      padding: 0,
+                      listStyle: "none",
+                      maxHeight: 150,
+                      overflowY: "auto",
+                      zIndex: 1000,
+                    }}
+                  >
+                    {recentVisitors
+                      .filter((v) =>
+                        v.full_name
+                          .toLowerCase()
+                          .includes(form.full_name.toLowerCase())
+                      )
+                      .map((v, i) => (
+                        <li
+                          key={i}
+                          style={{
+                            padding: "6px 10px",
+                            cursor: "pointer",
+                            borderBottom: "1px solid #eee",
+                          }}
+                          onClick={() => {
+                            setForm((f) => ({
+                              ...f,
+                              ...v, // ✅ autofill ข้อมูลจาก visitor เก่า
+                            }));
+                            setShowSuggest(false); // ✅ ปิด list ทันที
+                          }}
+                        >
+                          {v.full_name}
+                        </li>
+                      ))}
+                  </ul>
+                )}
 
-{showSuggest && form.full_name && (
-  <ul
-    style={{
-      position: "absolute",
-      top: "100%",
-      left: 0,
-      right: 0,
-      background: "#fff",
-      border: "1px solid #ccc",
-      borderRadius: 4,
-      margin: 0,
-      padding: 0,
-      listStyle: "none",
-      maxHeight: 150,
-      overflowY: "auto",
-      zIndex: 1000,
-    }}
-  >
-    {recentVisitors
-      .filter((v) =>
-        v.full_name.toLowerCase().includes(form.full_name.toLowerCase())
-      )
-      .map((v, i) => (
-        <li
-          key={i}
-          style={{
-            padding: "6px 10px",
-            cursor: "pointer",
-            borderBottom: "1px solid #eee",
-          }}
-          onClick={() => {
-            setForm((f) => ({
-              ...f,
-              ...v, // ✅ autofill ข้อมูลจาก visitor เก่า
-            }));
-            setShowSuggest(false); // ✅ ปิด list ทันที
-          }}
-        >
-          {v.full_name}
-        </li>
-      ))}
-  </ul>
-)}
-
-
-  {errors.full_name && (
-    <small className="error-text">{errors.full_name}</small>
-  )}
-</div>
-
-
+                {errors.full_name && (
+                  <small className="error-text">{errors.full_name}</small>
+                )}
+              </div>
             )}
 
             {fields.gender && (
@@ -705,58 +726,85 @@ const onSubmit = async (e) => {
             </div>
 
             <div style={{ marginTop: 12 }}>
-  <label>ภาพถ่าย</label>
-  <div className="row">
-    <video
-      ref={videoRef}
-      autoPlay
-      playsInline
-      style={{
-        width: 220,
-        height: 160,
-        background: "#000",
-        borderRadius: 12,
-      }}
-    />
-    <div
-      style={{ display: "flex", flexDirection: "column", gap: 8 }}
-    >
-      <button type="button" className="btn" onClick={takeSnapshot}>
-        ถ่ายภาพ
-      </button>
-      <button
-        type="button"
-        className="btn outline"
-        onClick={() => setPhotoDataUrl("")}
-      >
-        ลบรูป
-      </button>
+              <label>ภาพถ่าย</label>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 12,
+                  alignItems: "center",
+                }}
+              >
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  style={{
+                    width: "100%",
+                    maxWidth: 320,
+                    height: "auto",
+                    aspectRatio: "4/3",
+                    background: "#000",
+                    borderRadius: 12,
+                  }}
+                />
 
-      {/* ✅ ปุ่มสลับกล้อง */}
-      <button
-        type="button"
-        className="btn outline"
-        onClick={() => setFacingMode((m) => (m === "user" ? "environment" : "user"))}
-      >
-        🔄 สลับกล้อง ({facingMode === "user" ? "หน้า" : "หลัง"})
-      </button>
+                {/* ปุ่มต่าง ๆ จัดเรียงแนวตั้ง กดง่ายบนมือถือ */}
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                    width: "100%",
+                    maxWidth: 320,
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="btn"
+                    style={{ width: "100%" }}
+                    onClick={takeSnapshot}
+                  >
+                    📸 ถ่ายภาพ
+                  </button>
+                  <button
+                    type="button"
+                    className="btn outline"
+                    style={{ width: "100%" }}
+                    onClick={() => setPhotoDataUrl("")}
+                  >
+                    🗑️ ลบรูป
+                  </button>
+                  <button
+                    type="button"
+                    className="btn outline"
+                    style={{ width: "100%" }}
+                    onClick={() =>
+                      setFacingMode((m) =>
+                        m === "user" ? "environment" : "user"
+                      )
+                    }
+                  >
+                    🔄 สลับกล้อง ({facingMode === "user" ? "หน้า" : "หลัง"})
+                  </button>
+                </div>
 
-      {photoDataUrl && (
-        <img
-          src={photoDataUrl}
-          style={{
-            width: 220,
-            height: 160,
-            objectFit: "cover",
-            borderRadius: 12,
-            border: "1px solid #ddd",
-          }}
-        />
-      )}
-    </div>
-  </div>
-</div>
-
+                {photoDataUrl && (
+                  <img
+                    src={photoDataUrl}
+                    style={{
+                      width: "100%",
+                      maxWidth: 320,
+                      height: "auto",
+                      aspectRatio: "4/3",
+                      objectFit: "cover",
+                      borderRadius: 12,
+                      border: "1px solid #ddd",
+                    }}
+                  />
+                )}
+              </div>
+            </div>
 
             <div style={{ marginTop: 14 }}>
               <button className="btn" disabled={loading}>
@@ -854,15 +902,33 @@ const onSubmit = async (e) => {
       {showGuide && (
         <div className="modal-backdrop">
           <div className="modal">
-            <h3>คู่มือก่อนลงทะเบียน</h3>
+            <h3>📘 คู่มือก่อนลงทะเบียน</h3>
             <ol className="guide">
-              <li>ตรวจบัตรประชาชน/เอกสารก่อน (เลขต้องอ่านชัด)</li>
-              <li>ถ่ายภาพหน้าผู้มาติดต่อให้เห็นใบหน้าเต็ม</li>
               <li>
-                กรอก: ชื่อ-สกุล, เบอร์โทร, ผู้ติดต่อภายใน, วัตถุประสงค์ ให้ครบ
+                เตรียมบัตรประชาชน / ใบขับขี่ หรือเอกสารอื่น ๆ
+                ที่ใช้ยืนยันตัวตนให้พร้อม
               </li>
-              <li>หากใช้รถ ให้กรอกทะเบียน/ประเภทรถ</li>
-              <li>ตรวจทานข้อมูลอีกครั้งก่อนกด “บันทึก & ปริ้นสลิป”</li>
+              <li>
+                ถ่ายภาพบัตรประชาชน / ใบขับขี่ และถ่ายภาพผู้มาติดต่อให้ชัดเจน
+              </li>
+              <li>
+                กรอกข้อมูลให้ครบถ้วน ได้แก่:
+                <ul>
+                  <li>ชื่อ–นามสกุล</li>
+                  <li>เบอร์โทรศัพท์</li>
+                  <li>ผู้ติดต่อภายใน</li>
+                  <li>วัตถุประสงค์การเข้าพบ</li>
+                </ul>
+              </li>
+              <li>หากนำรถเข้าพื้นที่ กรุณากรอกข้อมูลทะเบียนรถ และประเภทรถ</li>
+              <li>
+                ตรวจสอบความถูกต้องของข้อมูลอีกครั้ง ก่อนกดปุ่ม{" "}
+                <b>“บันทึก & ปริ้นสลิป”</b>
+              </li>
+              <li>
+                ท่านสามารถเลือกเปิด/ปิดช่องข้อมูลเพิ่มเติมได้จากเมนู
+                “ตั้งค่าฟอร์ม” ด้านล่าง
+              </li>
             </ol>
 
             <div className="row" style={{ gap: 8, marginTop: 12 }}>
