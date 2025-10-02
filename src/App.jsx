@@ -68,6 +68,7 @@ export default function App() {
   const [errors, setErrors] = useState({});
   const firstErrorRef = useRef(null);
   const [showSuggest, setShowSuggest] = useState(false);
+  const [facingMode, setFacingMode] = useState("environment");
 
   
 
@@ -89,24 +90,31 @@ useEffect(() => {
 }, [])
 
   // Init webcam
-  useEffect(() => {
-    (async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" }, // ✅ ใช้กล้องหลัง
-          audio: false,
-        });
-        streamRef.current = stream;
-        if (videoRef.current) videoRef.current.srcObject = stream;
-      } catch (err) {
-        console.warn("camera error", err);
-      }
-    })();
-    return () => {
-      if (streamRef.current)
+ // Init webcam
+useEffect(() => {
+  (async () => {
+    try {
+      if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
-    };
-  }, []);
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode }, // ✅ ใช้ค่า state
+        audio: false,
+      });
+      streamRef.current = stream;
+      if (videoRef.current) videoRef.current.srcObject = stream;
+    } catch (err) {
+      console.warn("camera error", err);
+    }
+  })();
+
+  return () => {
+    if (streamRef.current)
+      streamRef.current.getTracks().forEach((t) => t.stop());
+  };
+}, [facingMode]); // ✅ เปลี่ยนกล้องเมื่อ state เปลี่ยน
+
 
   // Load latest visitors
   const loadVisitors = async () => {
@@ -697,47 +705,58 @@ const onSubmit = async (e) => {
             </div>
 
             <div style={{ marginTop: 12 }}>
-              <label>ภาพถ่าย (บัตรประชาชน/ใบขับขี่)</label>
-              <div className="row">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  style={{
-                    width: 220,
-                    height: 160,
-                    background: "#000",
-                    borderRadius: 12,
-                  }}
-                />
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
-                >
-                  <button type="button" className="btn" onClick={takeSnapshot}>
-                    ถ่ายภาพ
-                  </button>
-                  <button
-                    type="button"
-                    className="btn outline"
-                    onClick={() => setPhotoDataUrl("")}
-                  >
-                    ลบรูป
-                  </button>
-                  {photoDataUrl && (
-                    <img
-                      src={photoDataUrl}
-                      style={{
-                        width: 220,
-                        height: 160,
-                        objectFit: "cover",
-                        borderRadius: 12,
-                        border: "1px solid #ddd",
-                      }}
-                    />
-                  )}
-                </div>
-              </div>
-            </div>
+  <label>ภาพถ่าย</label>
+  <div className="row">
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline
+      style={{
+        width: 220,
+        height: 160,
+        background: "#000",
+        borderRadius: 12,
+      }}
+    />
+    <div
+      style={{ display: "flex", flexDirection: "column", gap: 8 }}
+    >
+      <button type="button" className="btn" onClick={takeSnapshot}>
+        ถ่ายภาพ
+      </button>
+      <button
+        type="button"
+        className="btn outline"
+        onClick={() => setPhotoDataUrl("")}
+      >
+        ลบรูป
+      </button>
+
+      {/* ✅ ปุ่มสลับกล้อง */}
+      <button
+        type="button"
+        className="btn outline"
+        onClick={() => setFacingMode((m) => (m === "user" ? "environment" : "user"))}
+      >
+        🔄 สลับกล้อง ({facingMode === "user" ? "หน้า" : "หลัง"})
+      </button>
+
+      {photoDataUrl && (
+        <img
+          src={photoDataUrl}
+          style={{
+            width: 220,
+            height: 160,
+            objectFit: "cover",
+            borderRadius: 12,
+            border: "1px solid #ddd",
+          }}
+        />
+      )}
+    </div>
+  </div>
+</div>
+
 
             <div style={{ marginTop: 14 }}>
               <button className="btn" disabled={loading}>
