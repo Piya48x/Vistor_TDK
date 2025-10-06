@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import ExcelJS from 'exceljs'
@@ -185,103 +183,43 @@ export default function Report() {
   }
 
   // Export Excel (หัวตารางไทย + แปลไทย)
-  // ✅ Export Excel Professional Style
-const exportToExcel = async (ids) => {
-  const rows = ids.length ? visitors.filter(v => ids.includes(v.id)) : visitors
-  if (!rows.length) return alert('กรุณาเลือกรายการก่อน')
+  const exportToExcel = async (ids) => {
+    const rows = ids.length ? visitors.filter(v => ids.includes(v.id)) : visitors
+    if (!rows.length) return alert('กรุณาเลือกรายการก่อน')
 
-  const wb = new ExcelJS.Workbook()
-  const ws = wb.addWorksheet('Visitors Report')
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('รายงานผู้มาติดต่อ')
 
-  // --- Define Columns ---
-  ws.columns = [
-    { header: 'ID', key: 'id', width: 12 },
-    { header: 'ชื่อ', key: 'full_name', width: 25 },
-    { header: 'เพศ', key: 'gender', width: 10 },
-    { header: 'ติดต่อ', key: 'contact_person', width: 20 },
-    { header: 'บริษัท', key: 'company', width: 20 },
-    { header: 'ทะเบียนรถ', key: 'vehicle_plate', width: 15 },
-    { header: 'ประสงค์', key: 'purpose', width: 25 },
-    { header: 'เวลาเข้า', key: 'checkin_time', width: 22 },
-    { header: 'เวลาออก', key: 'checkout_time', width: 22 },
-    { header: 'รูปถ่าย', key: 'photo', width: 18 },
-  ]
+    ws.columns = [
+      { header: 'ID', key: 'id', width: 12 },
+      { header: 'ชื่อ', key: 'full_name', width: 25 },
+      { header: 'บริษัท', key: 'company', width: 25 },
+      { header: 'ประสงค์', key: 'purpose', width: 25 },
+      { header: 'ติดต่อ', key: 'contact_person', width: 22 },
+      { header: 'เวลาเข้า', key: 'checkin_time', width: 22 },
+      { header: 'เวลาออก', key: 'checkout_time', width: 22 },
+    ]
+    ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }
+    ws.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' }
+    ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E40AF' } }
+    ws.views = [{ state: 'frozen', ySplit: 1 }]
+    ws.autoFilter = 'A1:G1'
 
-  // --- Header Style ---
-  const headerRow = ws.getRow(1)
-  headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 }
-  headerRow.alignment = { vertical: 'middle', horizontal: 'center' }
-  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } }
-  headerRow.height = 24
-  ws.views = [{ state: 'frozen', ySplit: 1 }]
-  ws.autoFilter = 'A1:J1'
-
-  // --- Add Data Rows ---
-  const PHOTO_COL = 'J'
-
-  for (const v of rows) {
-    const row = ws.addRow({
-      id: String(v.id).padStart(5, '0'),
-      full_name: v.full_name || '',
-      gender: v.gender || '',
-      contact_person: v.contact_person || '',
-      company: v.company || '',
-      vehicle_plate: v.vehicle_plate || '',
-      purpose: translatePurpose(v.purpose, v.other_purpose),
-      checkin_time: v.checkin_time ? new Date(v.checkin_time).toLocaleString() : '',
-      checkout_time: v.checkout_time ? new Date(v.checkout_time).toLocaleString() : '',
-      photo: '',
-    })
-    row.height = 45
-
-    // แถวคู่สลับสี (อ่านง่าย)
-    if (row.number % 2 === 0) {
-      row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } }
+    for (const v of rows) {
+      ws.addRow({
+        id: v.id,
+        full_name: v.full_name || '',
+        company: v.company || '',
+        purpose: translatePurpose(v.purpose, v.other_purpose),
+        contact_person: v.contact_person || '',
+        checkin_time: v.checkin_time ? new Date(v.checkin_time).toLocaleString() : '',
+        checkout_time: v.checkout_time ? new Date(v.checkout_time).toLocaleString() : '',
+      })
     }
 
-    // ใส่เส้นกรอบทุกเซลล์
-    row.eachCell((cell) => {
-      cell.border = {
-        top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-        left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-        bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-        right: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-      }
-      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }
-    })
-
-    // --- ใส่รูป ---
-    if (v.photo_url) {
-      try {
-        const res = await fetch(v.photo_url)
-        const buf = await res.arrayBuffer()
-        const contentType = res.headers.get('content-type') || ''
-        const ext = contentType.includes('png') ? 'png' : 'jpeg'
-        const imgId = wb.addImage({ buffer: buf, extension: ext })
-        const cellRef = `${PHOTO_COL}${row.number}:${PHOTO_COL}${row.number}`
-        ws.addImage(imgId, cellRef)
-      } catch (err) {
-        console.warn('ไม่สามารถโหลดรูป', v.photo_url, err)
-      }
-    }
+    const buf = await wb.xlsx.writeBuffer()
+    saveAs(new Blob([buf]), `รายงานผู้มาติดต่อ_${new Date().toISOString().slice(0,10)}.xlsx`)
   }
-
-  // --- ใส่กรอบให้ Header ด้วย ---
-  headerRow.eachCell((cell) => {
-    cell.border = {
-      top: { style: 'thin', color: { argb: 'FFFFFFFF' } },
-      left: { style: 'thin', color: { argb: 'FFFFFFFF' } },
-      bottom: { style: 'thin', color: { argb: 'FFFFFFFF' } },
-      right: { style: 'thin', color: { argb: 'FFFFFFFF' } },
-    }
-  })
-
-  // --- Save File ---
-  const buf = await wb.xlsx.writeBuffer()
-  const filename = `visitors_report_${new Date().toISOString().slice(0, 10)}.xlsx`
-  saveAs(new Blob([buf], { type: 'application/octet-stream' }), filename)
-}
-
 
   // toggle select
   const toggleSelect = (id) =>
@@ -331,66 +269,33 @@ const exportToExcel = async (ids) => {
             📍 สถานที่: <b>{SITE}</b>
           </div>
         </div>
-      </div><br /><br />
+      </div>
 
-
-  {/* Summary Cards (Table-like) */}
-<div className="noprint rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-gray-200">
-    {/* วันนี้เช็คอิน */}
-    <div className="p-5">
-      <div className="flex items-center gap-3">
-        <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 text-lg">📥</span>
-        <div>
-          <div className="text-sm font-medium text-gray-600">วันนี้เช็คอินแล้ว : {countToday} คน</div>
-          {/* <div className="mt-1 text-3xl font-semibold text-gray-900">{countToday}</div>
-          <div className="mt-1 text-xs text-gray-500">ตั้งแต่ {new Date().toLocaleDateString()} 00:00</div> */}
+      {/* Summary Cards */}
+      <div className="noprint grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="rounded-2xl border shadow-sm p-4 bg-indigo-50/80">
+          <div className="text-sm text-indigo-800">วันนี้เช็คอิน</div>
+          <div className="text-3xl font-semibold text-indigo-900 mt-1">{countToday}</div>
+          <div className="text-xs text-indigo-700 mt-1">ตั้งแต่ {new Date().toLocaleDateString()} 00:00</div>
+        </div>
+        <div className="rounded-2xl border shadow-sm p-4 bg-pink-50/80">
+          <div className="text-sm text-pink-800">ยังอยู่ในพื้นที่ (ยังไม่เช็คเอาท์)</div>
+          <div className="text-3xl font-semibold text-pink-900 mt-1">{countUncheckout}</div>
+          <div className="text-xs text-pink-700 mt-1">อัปเดตแบบเรียลไทม์</div>
+        </div>
+        <div className="rounded-2xl border shadow-sm p-4 bg-amber-50/80">
+          <div className="text-sm text-amber-800">จำนวนในช่วงที่กรอง</div>
+          <div className="text-3xl font-semibold text-amber-900 mt-1">{countRange}</div>
+          <div className="text-xs text-amber-700 mt-1">
+            {searchStart || searchEnd ? `${searchStart || '-'} → ${searchEnd || '-'}` : 'ไม่กำหนดช่วง'}
+          </div>
+        </div>
+        <div className="rounded-2xl border shadow-sm p-4 bg-emerald-50/80">
+          <div className="text-sm text-emerald-800">เช็คเอาท์แล้ววันนี้</div>
+          <div className="text-3xl font-semibold text-emerald-900 mt-1">{countCheckoutToday}</div>
+          <div className="text-xs text-emerald-700 mt-1">จนถึงขณะนี้</div>
         </div>
       </div>
-    </div>
-
-    {/* ยังอยู่ในพื้นที่ */}
-    <div className="p-5">
-      <div className="flex items-center gap-3">
-        <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-pink-100 text-pink-700 text-lg">🚧</span>
-        <div>
-          <div className="text-sm font-medium text-gray-600">ยังอยู่ในพื้นที่ (ยังไม่เช็คเอาท์) : {countUncheckout} คน</div>
-          {/* <div className="mt-1 text-3xl font-semibold text-gray-900">{countUncheckout}</div>
-          <div className="mt-1 text-xs text-gray-500">อัปเดตแบบเรียลไทม์</div> */}
-        </div>
-      </div>
-    </div>
-
-    {/* จำนวนในช่วงที่กรอง */}
-    <div className="p-5">
-      <div className="flex items-center gap-3">
-        <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-700 text-lg">🗓️</span>
-        <div>
-          <div className="text-sm font-medium text-gray-600">จำนวนคนที่มาติดต่อในวันนี้ : {countRange} คน</div>
-          <br />
-          <div className="mt-1 text-3xl font-semibold text-gray-900"></div>
-          <br />
-          {/* <div className="mt-1 text-xs text-gray-500">
-            {searchStart || searchEnd ? `${searchStart || '—'} → ${searchEnd || '—'}` : 'ไม่กำหนดช่วง'}
-          </div> */}
-        </div>
-      </div>
-    </div>
-
-    {/* เช็คเอาท์แล้ววันนี้ */}
-    <div className="p-5">
-      <div className="flex items-center gap-3">
-        <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 text-lg">✅</span>
-        <div>
-          <div className="text-sm font-medium text-gray-600">เช็คเอาท์ไปแล้ว : {countCheckoutToday} คน</div>
-          {/* <div className="mt-1 text-3xl font-semibold text-gray-900">{countCheckoutToday}</div>
-          <div className="mt-1 text-xs text-gray-500">จนถึงขณะนี้</div> */}
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-<br /><br />
 
       {/* Search & Action Bar */}
       <div className="noprint rounded-xl bg-white/80 backdrop-blur p-5 shadow-md border border-gray-200">
@@ -427,66 +332,59 @@ const exportToExcel = async (ids) => {
               onChange={(e) => setSearchName(e.target.value)}
               className="border border-gray-300 rounded-lg px-3 py-2 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
             />
-          </div><br />
+          </div>
 
           {/* ปุ่มคำสั่ง */}
           <div className="flex flex-wrap gap-3 mt-2">
             <button
               onClick={() => loadVisitors(searchStart, searchEnd, searchName)}
-              className="ml-8 custom-btn bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600 active:scale-[.98] transition"
-              style={{marginRight: 10}}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium shadow hover:bg-indigo-700 active:scale-[.98] transition"
             >
               🔍 ค้นหา
             </button>
 
             <button
               onClick={showToday}
-              className="ml-8 custom-btn bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600 active:scale-[.98] transition"
-              style={{marginRight: 10}}
+              className="bg-amber-500 text-white px-4 py-2 rounded-lg font-medium shadow hover:bg-amber-600 active:scale-[.98] transition"
             >
               📅 เฉพาะวันนี้
             </button>
 
             <button
               onClick={showAll}
-              className="ml-8 custom-btn bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600 active:scale-[.98] transition"
-              style={{marginRight: 10}}
+              className="bg-gray-500 text-white px-4 py-2 rounded-lg font-medium shadow hover:bg-gray-600 active:scale-[.98] transition"
             >
               📄 แสดงทั้งหมด
             </button>
 
             <button
               onClick={showUncheckout}
-              className="ml-8 custom-btn bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600 active:scale-[.98] transition"
-              style={{marginRight: 10}}
+              className="bg-pink-600 text-white px-4 py-2 rounded-lg font-medium shadow hover:bg-pink-700 active:scale-[.98] transition"
             >
               🚪 ยังไม่เช็คเอาท์
             </button>
 
             <button
               onClick={() => exportToExcel(selectedIds)}
-              className="ml-8 custom-btn bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600 active:scale-[.98] transition"
-              style={{marginRight: 10}}
+              className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium shadow hover:bg-green-700 active:scale-[.98] transition"
             >
               📤 Export Excel
             </button>
 
             <button
               onClick={() => deleteVisitor(selectedIds)}
-              className="ml-8 custom-btn bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600 active:scale-[.98] transition"
-              style={{marginRight: 10}}
+              className="bg-red-600 text-white px-4 py-2 rounded-lg font-medium shadow hover:bg-red-700 active:scale-[.98] transition"
             >
               🗑️ ลบ
             </button>
 
             <button
               onClick={() => navigate('/')}
-              className="ml-8 custom-btn bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600 active:scale-[.98] transition"
-              style={{marginRight: 10}}
+              className="bg-gray-800 text-white px-4 py-2 rounded-lg font-medium shadow hover:bg-gray-900 active:scale-[.98] transition"
             >
               ↩️ หน้าหลัก
             </button>
-          </div><br />
+          </div>
         </div>
       </div>
 

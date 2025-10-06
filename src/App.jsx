@@ -167,43 +167,41 @@ export default function App() {
   };
 
   /** ตรวจความครบถ้วน (คำนึงถึงช่องที่เปิดใช้งานอยู่จริง) */
-const validateForm = () => {
-  const _errors = {};
+  const validateForm = () => {
+    const _errors = {};
 
-  Object.entries(REQUIRED_FIELDS).forEach(([key, required]) => {
-    if (!required) return;
-    if (fields[key]) {
-      const val = (form[key] ?? "").toString().trim();
-      if (!val) _errors[key] = `กรุณากรอก ${labelOf(key)}`;
-      if (key === "id_number" && val && val.length < 6)
-        _errors[key] = "หมายเลขบัตรควรมีอย่างน้อย 6 หลัก";
-      if (key === "phone" && val && !/^\d{9,10}$/.test(val))
-        _errors[key] = "กรุณากรอกเบอร์โทรให้ถูกต้อง (9–10 หลัก)";
+    Object.entries(REQUIRED_FIELDS).forEach(([key, required]) => {
+      if (!required) return;
+      if (fields[key]) {
+        const val = (form[key] ?? "").toString().trim();
+        if (!val) _errors[key] = `กรุณากรอก ${labelOf(key)}`;
+        if (key === "id_number" && val && val.length < 6)
+          _errors[key] = "หมายเลขบัตรควรมีอย่างน้อย 6 หลัก";
+        if (key === "phone" && val && !/^\d{9,10}$/.test(val))
+          _errors[key] = "กรุณากรอกเบอร์โทรให้ถูกต้อง (9–10 หลัก)";
+      }
+    });
+
+    // ✅ บังคับรูปถ่ายด้วย
+    if (!photoDataUrl) {
+      _errors.photo =
+        "กรุณาถ่ายภาพ บัตรประชาชน/ใบขับขี่/เอกสารอื่นๆ ก่อนบันทึก";
     }
-  });
 
-  // ✅ บังคับรูปถ่ายด้วย
-  if (!photoDataUrl) {
-    _errors.photo = "กรุณาถ่ายภาพ บัตรประชาชน/ใบขับขี่/เอกสารอื่นๆ ก่อนบันทึก";
-  }
+    setErrors(_errors);
 
-  setErrors(_errors);
-
-  if (Object.keys(_errors).length) {
-    const firstKey = Object.keys(_errors)[0];
-    const el = document.querySelector(`[data-field="${firstKey}"]`);
-    if (el) {
-      firstErrorRef.current = el;
-      setTimeout(() => el.focus({ preventScroll: false }), 0);
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (Object.keys(_errors).length) {
+      const firstKey = Object.keys(_errors)[0];
+      const el = document.querySelector(`[data-field="${firstKey}"]`);
+      if (el) {
+        firstErrorRef.current = el;
+        setTimeout(() => el.focus({ preventScroll: false }), 0);
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      return false;
     }
-    return false;
-  }
-  return true;
-};
-
-
-
+    return true;
+  };
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -348,54 +346,143 @@ const validateForm = () => {
     <div className="container">
       {/* inline CSS สำหรับ error & modal */}
       <style>{`
-        .input.error{ border:1px solid #e23; box-shadow:0 0 0 3px rgba(226,35,67,.12); }
-        .error-text{ color:#e23; margin-top:4px; display:inline-block; }
-        .modal-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.45); display:grid; place-items:center; z-index:9999; }
-        .modal{ width:min(680px,92vw); background:#fff; border-radius:16px; padding:20px; box-shadow:0 20px 60px rgba(0,0,0,.25); }
-        .modal h3{ margin:0 0 10px; font-size:20px }
-        .guide{ margin:8px 0 0 18px } :root{
-  --primary:#0d6efd;
-  --primary-600:#0b5ed7;
-  --danger:#e23;
-  --ring:#b3d4ff;
+        :root {
+  --primary:#000;      /* ใช้สีดำแทน */
+  --primary-hover:#222; 
+  --danger:#e23;       /* แดงเอาไว้เตือน */
+  --ring:#999;
+  --text:#222;
+  --muted:#666;
+  --bg:#fff;
+  --bg-soft:#f7f7f7;
 }
 
-.btn{
+/* input error */
+.input.error {
+  border:1px solid var(--danger);
+  box-shadow:0 0 0 3px rgba(226,35,67,.12);
+}
+.error-text {
+  color:var(--danger);
+  margin-top:4px;
+  display:inline-block;
+  font-size:13px;
+}
+
+/* modal */
+.modal-backdrop {
+  position:fixed; inset:0;
+  background:rgba(0,0,0,.45);
+  display:grid; place-items:center;
+  z-index:9999;
+}
+.modal {
+  width:min(680px,92vw);
+  background:var(--bg);
+  border-radius:16px;
+  padding:20px;
+  box-shadow:0 20px 60px rgba(0,0,0,.25);
+}
+.modal h3 {
+  margin:0 0 10px;
+  font-size:20px;
+  font-weight:600;
+  color:var(--text);
+}
+.guide { margin:8px 0 0 18px; color:var(--muted); }
+
+/* ปุ่ม */
+.btn {
   padding:12px;
   font-size:16px;
-  border-radius:10px;
+  border-radius:8px;
   cursor:pointer;
   font-weight:500;
-  border:0;
-  background:var(--primary);
-  color:#fff;
+  border:1.5px solid var(--primary);
+  background: black;
+  color: white;
   transition:background .2s,color .2s,box-shadow .2s,transform .02s;
 }
-.btn:hover{ background:var(--primary-600); box-shadow:0 6px 14px rgba(0,0,0,.12); transform:translateY(-1px); }
-.btn:active{ transform:translateY(0); }
-.btn:focus-visible{ outline:none; box-shadow:0 0 0 3px var(--ring); }
-
-.btn.outline{
-  background:#fff;
+.btn1 {
+  padding:12px;
+  font-size:16px;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:500;
   border:1.5px solid var(--primary);
-  color:var(--primary);
+  background: white;
+  color: black;
+  transition:background .2s,color .2s,box-shadow .2s,transform .02s;
 }
-.btn.outline:hover{ background:var(--primary); color:#fff; box-shadow:0 6px 14px rgba(0,0,0,.12); }
+.btn:hover {
+ background:white;
+  color:#456882;
+  transform:translateY(-1px);
+  border:1.5px solid #456882;
+  box-shadow:0 4px 8px rgba(0,0,0,.12);
+}
+.btn1:hover {
+  background:white;
+  color:#456882;
+  transform:translateY(-1px);
+  border:1.5px solid #456882;
+  box-shadow:0 4px 8px rgba(0,0,0,.12);
+}
+.btn:active { transform:translateY(0); }
+.btn:focus-visible {
+  outline:none;
+  box-shadow:0 0 0 3px rgba(0,0,0,.25);
+}
 
-.btn.danger{ border-color:var(--danger) !important; color:var(--danger) !important; }
-.btn.danger:hover{ background:var(--danger) !important; color:#fff !important; }
+/* ปุ่มขอบ */
+.btn.outline {
+  background:var(--bg);
+  border:1.5px solid var(--primary);
+  color:black;
+}
+.btn.outline:hover {
+  background:white;
+  color:#000;
+}
 
-.photo-hint{
-  font-size:13px; color:#475569;
-  background:#f6f9ff; border:1px dashed #bcd;
-  padding:8px 10px; border-radius:8px; margin-top:6px;
+/* ปุ่ม danger */
+.btn.danger {
+  border:1.5px solid #000;
+  color:var(--danger);
+}
+.btn.danger:hover {
+  background:white;
+  color:red;
+}
+
+/* ป้ายบอก / hint */
+.photo-hint {
+  font-size:13px;
+  color:var(--muted);
+  background:var(--bg-soft);
+  border:1px dashed #ccc;
+  padding:8px 10px;
+  border-radius:8px;
+  margin-top:6px;
 }
 
 /* layout ปุ่มในโซนภาพถ่าย */
-.btn-col{ width:100%; max-width:320px; display:flex; flex-direction:column; gap:10px; }
+.btn-col {
+  width:100%;
+  max-width:320px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
 
 @media (max-width:768px){
-  .btn{ width:100%; font-size:18px; padding:14px; }
+  .btn {
+    width:100%;
+    font-size:18px;
+    padding:14px;
+  }
+}
+
 }
 
  
@@ -755,83 +842,80 @@ const validateForm = () => {
               )}
             </div>
 
-      <div style={{ marginTop: 12 }}>
-  <label style={{ fontWeight: "bold" }}>ภาพถ่าย</label>
-  
-  <p className="photo-hint">
-    กรุณาถ่ายภาพ <b>บัตรประชาชน/ใบขับขี่/เอกสารอื่น ๆ</b> ให้ชัดเจนก่อนกดบันทึก
-  </p>
+            <div style={{ marginTop: 12 }}>
+              <label style={{ fontWeight: "bold" }}>ภาพถ่าย</label>
 
-  <div
-    style={{
-      display: "flex",
-      flexDirection: "column",
-      gap: 12,
-      alignItems: "center",
-    }}
-  >
-    <video
-      ref={videoRef}
-      autoPlay
-      playsInline
-      style={{
-        width: "100%",
-        maxWidth: 320,
-        height: "auto",
-        aspectRatio: "4/3",
-        background: "#000",
-        borderRadius: 12,
-      }}
-    />
- {errors.photo && (
-    <small className="error-text">{errors.photo}</small>
-  )}
-    <div className="btn-col">
-      <button
-        type="button"
-        className="btn"
-        onClick={takeSnapshot}
-      >
-        📸 ถ่ายภาพ
-      </button>
+              <p className="photo-hint">
+                กรุณาถ่ายภาพ <b>บัตรประชาชน/ใบขับขี่/เอกสารอื่น ๆ</b>{" "}
+                ให้ชัดเจนก่อนกดบันทึก
+              </p>
 
-      <button
-        type="button"
-        className="btn outline danger"
-        onClick={() => setPhotoDataUrl("")}
-      >
-        🗑️ ลบรูป
-      </button>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 12,
+                  alignItems: "center",
+                }}
+              >
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  style={{
+                    width: "100%",
+                    maxWidth: 320,
+                    height: "auto",
+                    aspectRatio: "4/3",
+                    background: "#000",
+                    borderRadius: 12,
+                  }}
+                />
+                {errors.photo && (
+                  <small className="error-text">{errors.photo}</small>
+                )}
+                <div className="btn-col">
+                  <button type="button" className="btn1" onClick={takeSnapshot}>
+                    📸 ถ่ายภาพ
+                  </button>
 
-      <button
-        type="button"
-        className="btn outline"
-        onClick={() =>
-          setFacingMode((m) => (m === "user" ? "environment" : "user"))
-        }
-      >
-        🔄 สลับกล้อง ({facingMode === "user" ? "หน้า" : "หลัง"})
-      </button>
-    </div>
+                  <button
+                    type="button"
+                    className="btn outline danger"
+                    onClick={() => setPhotoDataUrl("")}
+                  >
+                    🗑️ ลบรูป
+                  </button>
 
-    {photoDataUrl && (
-      <img
-        src={photoDataUrl}
-        style={{
-          width: "100%",
-          maxWidth: 320,
-          height: "auto",
-          aspectRatio: "4/3",
-          objectFit: "cover",
-          borderRadius: 12,
-          border: "1px solid #ddd",
-        }}
-      />
-    )}
-  </div>
-</div>
+                  <button
+                    type="button"
+                    className="btn outline"
+                    onClick={() =>
+                      setFacingMode((m) =>
+                        m === "user" ? "environment" : "user"
+                      )
+                    }
+                  >
+                    🔄 สลับกล้อง ({facingMode === "user" ? "หน้า" : "หลัง"})
+                  </button>
+                </div>
 
-
+                {photoDataUrl && (
+                  <img
+                    src={photoDataUrl}
+                    style={{
+                      width: "100%",
+                      maxWidth: 320,
+                      height: "auto",
+                      aspectRatio: "4/3",
+                      objectFit: "cover",
+                      borderRadius: 12,
+                      border: "1px solid #ddd",
+                    }}
+                  />
+                )}
+              </div>
+            </div>
 
             <div style={{ marginTop: 14 }}>
               <button className="btn" disabled={loading}>
