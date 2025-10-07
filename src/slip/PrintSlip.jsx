@@ -142,7 +142,7 @@ export default function PrintSlip({ id: propId, inModal = false }) {
       )}
 
       {/* Photo */}
-      {v.photo_url && (
+      {/* {v.photo_url && (
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
           <img
             src={v.photo_url}
@@ -155,7 +155,7 @@ export default function PrintSlip({ id: propId, inModal = false }) {
             }}
           />
         </div>
-      )}
+      )} */}
 
       {/* Signature Box */}
       <div
