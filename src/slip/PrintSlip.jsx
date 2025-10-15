@@ -130,9 +130,14 @@ export default function PrintSlip({ id: propId, inModal = false }) {
         <div>
           <b>เวลาออก:</b> {formatDate(v.checkout_time) || "................................"}
         </div>
+        <br />
+        <div>
+          <b style={{ fontSize: 12 }}>รปภ:</b> {"........................................."}
+        </div>
+
       </div>
 
-      <div style={{ borderTop: "1px dashed #000", margin: "10px 0" }}></div>
+      <div style={{ borderTop: "1px dashed #000", margin: "30px 0" }}></div>
 
       {/* QR Code */}
       {v.qr_data && (
