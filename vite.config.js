@@ -7,7 +7,7 @@ export default defineConfig({
     host: true,
     port: 3000,
     allowedHosts: [
-      'vistor-tdk-oqni.vercel.app',
+      'df753bf07dc9.ngrok-free.app',
       'localhost',
       '127.0.0.1'
     ]

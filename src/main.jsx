@@ -7,6 +7,7 @@ import PrintSlip from './slip/PrintSlip.jsx'
 import './styles.css'
 import Report from './slip/Report.jsx'
 import Modal from './slip/Modal.jsx'
+import './index.css'
 
 
 const router = createBrowserRouter([

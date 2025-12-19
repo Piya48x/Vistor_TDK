@@ -3,13 +3,25 @@ import { supabase } from "../supabaseClient";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { useNavigate } from "react-router-dom";
+import {
+  Search,
+  Calendar,
+  Users,
+  Clock,
+  CheckCircle,
+  Printer,
+  Trash2,
+  Download,
+  Edit,
+  Save,
+  X,
+} from "lucide-react";
 
 const USERNAME = "1234";
 const PASSWORD = "1234";
 const ORG = import.meta.env.VITE_ORG_NAME || "Just-iD Visitor";
 const SITE = import.meta.env.VITE_SITE_NAME || "Global Securitech";
 
-// 🕓 ฟังก์ชันแปลงเวลาให้เป็นรูปแบบเดียวกันทั่วระบบ
 const dateFormatter = new Intl.DateTimeFormat("en-GB", {
   timeZone: "Asia/Bangkok",
   year: "numeric",
@@ -26,16 +38,27 @@ function formatDateTime(isoString) {
   return dateFormatter.format(new Date(isoString));
 }
 
+function calculateDuration(checkin, checkout) {
+  if (!checkin) return "—";
+  const start = new Date(checkin);
+  const end = checkout ? new Date(checkout) : new Date();
+  const diff = Math.abs(end - start);
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  return hours === 0 ? `${minutes} นาที` : `${hours} ชม. ${minutes} นาที`;
+}
+
 export default function Report() {
-  // ---------------- STATE ----------------
   const [visitors, setVisitors] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
-
   const [searchStart, setSearchStart] = useState("");
   const [searchEnd, setSearchEnd] = useState("");
   const [searchName, setSearchName] = useState("");
+  
+  // เพิ่ม State สำหรับการแก้ไข (ที่ขาดไป)
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({});
 
-  // summary counters
   const [countToday, setCountToday] = useState(0);
   const [countUncheckout, setCountUncheckout] = useState(0);
   const [countRange, setCountRange] = useState(0);
@@ -45,7 +68,6 @@ export default function Report() {
   const hasPromptedRef = useRef(false);
   const navigate = useNavigate();
 
-  // ---------------- LOGIN ONCE ----------------
   useEffect(() => {
     if (hasPromptedRef.current) return;
     hasPromptedRef.current = true;
@@ -57,7 +79,6 @@ export default function Report() {
     }
   }, [navigate]);
 
-  // ---------------- HELPERS ----------------
   const startOfDay = (d = new Date()) => {
     const x = new Date(d);
     x.setHours(0, 0, 0, 0);
@@ -69,127 +90,66 @@ export default function Report() {
     return x;
   };
 
-  const toISO = (d) => new Date(d).toISOString();
-
-  // ---------------- LOADERS ----------------
   const loadVisitors = async (startDate = "", endDate = "", name = "") => {
-    let q = supabase
-      .from("visitors")
-      .select("*")
-      .order("id", { ascending: false });
-
-    if (startDate) {
-      const s = startOfDay(new Date(startDate));
-      q = q.gte("checkin_time", s.toISOString());
-    }
-    if (endDate) {
-      const e = endOfDay(new Date(endDate));
-      q = q.lte("checkin_time", e.toISOString());
-    }
+    let q = supabase.from("visitors").select("*").order("id", { ascending: false });
+    if (startDate) q = q.gte("checkin_time", startOfDay(new Date(startDate)).toISOString());
+    if (endDate) q = q.lte("checkin_time", endOfDay(new Date(endDate)).toISOString());
     if (name) q = q.ilike("full_name", `%${name}%`);
-
     const { data, error } = await q;
     if (!error) setVisitors(data || []);
   };
 
   const loadSummary = async (startDate = "", endDate = "") => {
-    // วันนี้
-    const tStart = startOfDay();
-    const tEnd = endOfDay();
+    const tStart = startOfDay().toISOString();
+    const tEnd = endOfDay().toISOString();
 
-    // 1) วันนี้เช็คอินกี่คน
-    {
-      const { count } = await supabase
-        .from("visitors")
-        .select("id", { count: "exact", head: true })
-        .gte("checkin_time", tStart.toISOString())
-        .lte("checkin_time", tEnd.toISOString());
-      setCountToday(count || 0);
-    }
+    const { count: cToday } = await supabase.from("visitors").select("id", { count: "exact", head: true }).gte("checkin_time", tStart).lte("checkin_time", tEnd);
+    setCountToday(cToday || 0);
 
-    // 2) ยังไม่เช็คเอาท์ (ทั้งหมดตอนนี้)
-    {
-      const { count } = await supabase
-        .from("visitors")
-        .select("id", { count: "exact", head: true })
-        .is("checkout_time", null);
-      setCountUncheckout(count || 0);
-    }
+    const { count: cUncheck } = await supabase.from("visitors").select("id", { count: "exact", head: true }).is("checkout_time", null);
+    setCountUncheckout(cUncheck || 0);
 
-    // 3) จำนวนในช่วงวันที่ที่กำลังกรอง (ถ้าไม่เลือกช่วง ให้เท่ากับทั้งหมด)
-    {
-      let q = supabase
-        .from("visitors")
-        .select("id", { count: "exact", head: true });
-      if (startDate)
-        q = q.gte(
-          "checkin_time",
-          startOfDay(new Date(startDate)).toISOString()
-        );
-      if (endDate)
-        q = q.lte("checkin_time", endOfDay(new Date(endDate)).toISOString());
-      const { count } = await q;
-      setCountRange(count || 0);
-    }
+    let qRange = supabase.from("visitors").select("id", { count: "exact", head: true });
+    if (startDate) qRange = qRange.gte("checkin_time", startOfDay(new Date(startDate)).toISOString());
+    if (endDate) qRange = qRange.lte("checkin_time", endOfDay(new Date(endDate)).toISOString());
+    const { count: cRange } = await qRange;
+    setCountRange(cRange || 0);
 
-    // 4) เช็คเอาท์แล้ววันนี้
-    {
-      const { count } = await supabase
-        .from("visitors")
-        .select("id", { count: "exact", head: true })
-        .gte("checkout_time", tStart.toISOString())
-        .lte("checkout_time", tEnd.toISOString());
-      setCountCheckoutToday(count || 0);
-    }
+    const { count: cOutToday } = await supabase.from("visitors").select("id", { count: "exact", head: true }).gte("checkout_time", tStart).lte("checkout_time", tEnd);
+    setCountCheckoutToday(cOutToday || 0);
   };
 
-  // init load
   useEffect(() => {
     loadVisitors();
     loadSummary();
   }, []);
 
-  // reload summary when filters change (เพื่อให้ countRange ตามช่วง)
   useEffect(() => {
     loadSummary(searchStart, searchEnd);
   }, [searchStart, searchEnd]);
 
-  // ---------------- REALTIME ----------------
   useEffect(() => {
     const channel = supabase
       .channel("visitors-changes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "visitors" },
-        (payload) => {
-          // refresh list ตาม filter ปัจจุบัน
-          loadVisitors(searchStart, searchEnd, searchName);
-          // refresh summary counters
-          loadSummary(searchStart, searchEnd);
-
-          // auto print เมื่อมี insert (ครั้งเดียว)
-          if (payload.eventType === "INSERT") {
-            const v = payload.new;
-            if (v?.id && !printedIdsRef.current.has(v.id)) {
-              printedIdsRef.current.add(v.id);
-              window.open(`/print/${v.id}`, "_blank");
-            }
+      .on("postgres_changes", { event: "*", schema: "public", table: "visitors" }, (payload) => {
+        loadVisitors(searchStart, searchEnd, searchName);
+        loadSummary(searchStart, searchEnd);
+        if (payload.eventType === "INSERT") {
+          const v = payload.new;
+          if (v?.id && !printedIdsRef.current.has(v.id)) {
+            printedIdsRef.current.add(v.id);
+            window.open(`/print/${v.id}`, "_blank");
           }
         }
-      )
+      })
       .subscribe();
-
     return () => supabase.removeChannel(channel);
   }, [searchStart, searchEnd, searchName]);
 
-  // ---------------- ACTIONS ----------------
+  // --- ACTIONS (ลบตัวที่ซ้ำออกแล้ว) ---
   const checkOut = async (id) => {
-    await supabase
-      .from("visitors")
-      .update({ checkout_time: new Date().toISOString() })
-      .eq("id", id);
-    await loadVisitors(searchStart, searchEnd, searchName);
-    await loadSummary(searchStart, searchEnd);
+    await supabase.from("visitors").update({ checkout_time: new Date().toISOString() }).eq("id", id);
+    loadVisitors(searchStart, searchEnd, searchName);
   };
 
   const deleteVisitor = async (ids) => {
@@ -197,491 +157,191 @@ export default function Report() {
     if (!confirm("ต้องการลบรายการที่เลือกใช่หรือไม่?")) return;
     await supabase.from("visitors").delete().in("id", ids);
     setSelectedIds([]);
-    await loadVisitors(searchStart, searchEnd, searchName);
-    await loadSummary(searchStart, searchEnd);
+    loadVisitors(searchStart, searchEnd, searchName);
   };
 
-  // แปลไทย purpose
   const translatePurpose = (p, other) => {
-    const map = {
-      delivery: "ส่งของ",
-      meeting: "ประชุม",
-      interview: "สัมภาษณ์งาน",
-      customer: "ลูกค้า",
-      maintenance: "เข้าซ่อม/บริการ",
-      service: "เข้าซ่อม/บริการ",
-      visit: "เยี่ยมชม",
-    };
-    if (p === "other") return other || "อื่นๆ";
-    return map[p] || p || "";
+    const map = { delivery: "ส่งของ", meeting: "ประชุม", interview: "สัมภาษณ์งาน", customer: "ลูกค้า", maintenance: "เข้าซ่อม/บริการ", service: "เข้าซ่อม/บริการ", visit: "เยี่ยมชม" };
+    return p === "other" ? other || "อื่นๆ" : map[p] || p || "";
   };
 
-  // Export Excel (หัวตารางไทย + แปลไทย)
-  // ✅ Export Excel Professional Style
-  const exportToExcel = async (ids) => {
-    const rows = ids.length
-      ? visitors.filter((v) => ids.includes(v.id))
-      : visitors;
-    if (!rows.length) return alert("กรุณาเลือกรายการก่อน");
+  const toggleSelect = (id) => setSelectedIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  const toggleSelectAll = () => setSelectedIds(selectedIds.length === visitors.length ? [] : visitors.map((v) => v.id));
 
-    const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("Visitors Report");
-
-    // --- Define Columns ---
-    ws.columns = [
-      { header: "ID", key: "id", width: 12 },
-      { header: "ชื่อ", key: "full_name", width: 25 },
-      { header: "เพศ", key: "gender", width: 10 },
-      { header: "ติดต่อ", key: "contact_person", width: 20 },
-      { header: "บริษัท", key: "company", width: 20 },
-      { header: "ทะเบียนรถ", key: "vehicle_plate", width: 15 },
-      { header: "ประสงค์", key: "purpose", width: 25 },
-      { header: "เวลาเข้า", key: "checkin_time", width: 22 },
-      { header: "เวลาออก", key: "checkout_time", width: 22 },
-      { header: "รูปถ่าย", key: "photo", width: 18 },
-    ];
-
-    // --- Header Style ---
-    const headerRow = ws.getRow(1);
-    headerRow.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 12 };
-    headerRow.alignment = { vertical: "middle", horizontal: "center" };
-    headerRow.fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FF1E3A8A" },
-    };
-    headerRow.height = 24;
-    ws.views = [{ state: "frozen", ySplit: 1 }];
-    ws.autoFilter = "A1:J1";
-
-    // --- Add Data Rows ---
-    const PHOTO_COL = "J";
-
-    for (const v of rows) {
-      const row = ws.addRow({
-        id: String(v.id).padStart(5, "0"),
-        full_name: v.full_name || "",
-        gender: v.gender || "",
-        contact_person: v.contact_person || "",
-        company: v.company || "",
-        vehicle_plate: v.vehicle_plate || "",
-        purpose: translatePurpose(v.purpose, v.other_purpose),
-        checkin_time: formatDateTime(v.checkin_time),
-        checkout_time: formatDateTime(v.checkout_time),
-
-        photo: "",
-      });
-      row.height = 45;
-
-      // แถวคู่สลับสี (อ่านง่าย)
-      if (row.number % 2 === 0) {
-        row.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: "FFF8FAFC" },
-        };
-      }
-
-      // ใส่เส้นกรอบทุกเซลล์
-      row.eachCell((cell) => {
-        cell.border = {
-          top: { style: "thin", color: { argb: "FFCBD5E1" } },
-          left: { style: "thin", color: { argb: "FFCBD5E1" } },
-          bottom: { style: "thin", color: { argb: "FFCBD5E1" } },
-          right: { style: "thin", color: { argb: "FFCBD5E1" } },
-        };
-        cell.alignment = {
-          vertical: "middle",
-          horizontal: "center",
-          wrapText: true,
-        };
-      });
-
-      // --- ใส่รูป ---
-      if (v.photo_url) {
-        try {
-          const res = await fetch(v.photo_url);
-          const buf = await res.arrayBuffer();
-          const contentType = res.headers.get("content-type") || "";
-          const ext = contentType.includes("png") ? "png" : "jpeg";
-          const imgId = wb.addImage({ buffer: buf, extension: ext });
-          const cellRef = `${PHOTO_COL}${row.number}:${PHOTO_COL}${row.number}`;
-          ws.addImage(imgId, cellRef);
-        } catch (err) {
-          console.warn("ไม่สามารถโหลดรูป", v.photo_url, err);
-        }
-      }
-    }
-
-    // --- ใส่กรอบให้ Header ด้วย ---
-    headerRow.eachCell((cell) => {
-      cell.border = {
-        top: { style: "thin", color: { argb: "FFFFFFFF" } },
-        left: { style: "thin", color: { argb: "FFFFFFFF" } },
-        bottom: { style: "thin", color: { argb: "FFFFFFFF" } },
-        right: { style: "thin", color: { argb: "FFFFFFFF" } },
-      };
-    });
-
-    // --- Save File ---
-    const buf = await wb.xlsx.writeBuffer();
-    const filename = `visitors_report_${new Date()
-      .toISOString()
-      .slice(0, 10)}.xlsx`;
-    saveAs(new Blob([buf], { type: "application/octet-stream" }), filename);
-  };
-
-  // toggle select
-  const toggleSelect = (id) =>
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
-
-  const toggleSelectAll = () =>
-    setSelectedIds(
-      selectedIds.length === visitors.length ? [] : visitors.map((v) => v.id)
-    );
-
-  // quick filters
   const showToday = () => {
     const t = new Date().toISOString().slice(0, 10);
     setSearchStart(t);
     setSearchEnd(t);
-    setSearchName("");
-    loadVisitors(t, t, "");
-    loadSummary(t, t);
+    loadVisitors(t, t, searchName);
   };
 
   const showAll = () => {
     setSearchStart("");
     setSearchEnd("");
-    setSearchName("");
-    loadVisitors();
-    loadSummary();
+    loadVisitors("", "", searchName);
   };
 
-  const showUncheckout = async () => {
-    const { data, error } = await supabase
-      .from("visitors")
-      .select("*")
-      .is("checkout_time", null)
-      .order("checkin_time", { ascending: false });
-    if (!error) setVisitors(data || []);
-    // summary ยังคงคำนวณตามจริง (ไม่เปลี่ยน)
+  const exportToExcel = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Visitors");
+    worksheet.columns = [
+      { header: "ID", key: "id", width: 10 },
+      { header: "ชื่อ-นามสกุล", key: "full_name", width: 25 },
+      { header: "บริษัท", key: "company", width: 20 },
+      { header: "วัตถุประสงค์", key: "purpose", width: 20 },
+      { header: "เวลาเข้า", key: "checkin", width: 20 },
+      { header: "เวลาออก", key: "checkout", width: 20 },
+    ];
+    visitors.forEach(v => {
+      worksheet.addRow({
+        id: v.id,
+        full_name: v.full_name,
+        company: v.company,
+        purpose: translatePurpose(v.purpose, v.other_purpose),
+        checkin: formatDateTime(v.checkin_time),
+        checkout: formatDateTime(v.checkout_time),
+      });
+    });
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), `Visitor_Report_${new Date().toLocaleDateString()}.xlsx`);
   };
 
-  // ---------------- RENDER ----------------
+  const startEdit = (visitor) => {
+    setEditingId(visitor.id);
+    setEditForm({ ...visitor });
+  };
+
+  const saveEdit = async () => {
+    const { data, error } = await supabase.from("visitors").update(editForm).eq("id", editingId);
+    if (!error) {
+      setEditingId(null);
+      loadVisitors(searchStart, searchEnd, searchName);
+    }
+  };
+
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-   {/* NAVBAR: ORG / SITE + actions */}
-<nav className="noprint sticky top-0 z-40 bg-white/90 backdrop-blur border-b">
-  <div className="container mx-auto px-4">
-    <div className="flex items-center justify-between h-14">
-      {/* Left: Brand + Org/Site */}
-      <div className="flex items-center gap-3">
-
-        <div className="flex flex-col leading-tight">
-          <span style={{ fontWeight: 700, fontSize:30 }} className="font-semibold text-gray-900">{ORG}</span>
-          <br />
-          <br />
-          <span style={{ fontWeight: 700, fontSize:30 }} className="text-xs text-gray-500">📍 {SITE}</span>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Navbar */}
+      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-200 shadow-sm">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white"><Users /></div>
+            <div>
+              <div className="font-bold">{ORG}</div>
+              <div className="text-xs text-gray-500">{SITE}</div>
+            </div>
+          </div>
         </div>
-      </div>
-<br />
-      {/* Right: Quick actions (ถ้าต้องการเพิ่มลิงก์ไปหน้าอื่น กดเพิ่มได้) */}
-      <div className="flex items-center gap-2">
-        {/* <button
-          onClick={() => {
-            // ไปหน้า Dashboard ถ้ามี
-            // navigate('/dashboard') // ถ้าใช้ router หลายหน้า
-            window.scrollTo({ top: 0, behavior: 'smooth' })
-          }}
-          className="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100"
-          style={{ marginRight: 10 }}
-        >
-          Dashboard
-        </button>  */}
-        {/* <button
-          onClick={() => window.location.reload()}
-          className="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100"
-        >
-          รีเฟรช
-        </button> */}
-      </div>
-    </div>
-  </div>
-</nav>
+      </nav>
 
-
-      <br />
-
-      {/* Summary Cards (Table-like) */}
-     {/* STATUS BAR (Compact) */}
-<div className="noprint">
-  <div className="rounded-xl border border-gray-200 bg-white shadow-sm px-3 py-2">
-    <div className="flex flex-wrap items-center gap-2">
-      {/* วันนี้เช็คอิน */}
-      <span style={{marginRight: 20}} className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5">
-        <span className="text-indigo-700">📥</span>
-        <span className="text-xs text-indigo-800">
-          วันนี้เช็คอิน: <b className="font-semibold">{countToday}</b>
-        </span>
-      </span>
-
-      {/* ยังอยู่ในพื้นที่ */}
-      <span style={{marginRight: 20}} className="inline-flex items-center gap-1.5 rounded-lg border border-pink-200 bg-pink-50 px-3 py-1.5">
-        <span className="text-pink-700">🚧</span>
-        <span className="text-xs text-pink-800">
-          ยังอยู่ในพื้นที่: <b className="font-semibold">{countUncheckout}</b>
-        </span>
-        {/* live ping */}
-        <span className="relative ml-1 flex h-2.5 w-2.5">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60"></span>
-          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-        </span>
-      </span>
-
-      {/* จำนวนรวมทั้งหมด (หรือช่วงที่กรอง) */}
-    
-
-      {/* เช็คเอาท์แล้ววันนี้ */}
-      <span style={{marginRight: 20}} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5">
-        <span className="text-emerald-700">✅</span>
-        <span className="text-xs text-emerald-800">
-          เช็คเอาท์แล้ววันนี้: <b className="font-semibold">{countCheckoutToday}</b>
-        </span>
-      </span>
-        <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5">
-        <span className="text-amber-700">🗓️</span>
-        <span className="text-xs text-amber-800">
-          รวมทั้งหมด: <b className="font-semibold">{countRange}</b>
-        </span>
-        {/* {(searchStart || searchEnd) && (
-          <span className="ml-2 text-[11px] text-amber-700/80">
-            {searchStart || '—'} → {searchEnd || '—'}
-          </span>
-        )} */}
-      </span>
-    </div>
-    
-  </div>
-  
-</div>
-
-
-
-<br /><br /><hr />
-
-      <br />
-
-      {/* Search & Action Bar */}
-      <div className="noprint rounded-xl bg-white/80 backdrop-blur p-5 shadow-md border border-gray-200">
-        <div className="flex flex-wrap items-end gap-4">
-          {/* จากวันที่ */}
-          <div className="flex flex-col">
-            <label className="text-sm font-medium text-gray-600 mb-1">
-              จากวันที่
-            </label>
-            <input
-              type="date"
-              value={searchStart}
-              onChange={(e) => setSearchStart(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-            />
-          </div>
-
-          {/* ถึงวันที่ */}
-          <div className="flex flex-col">
-            <label className="text-sm font-medium text-gray-600 mb-1">
-              ถึงวันที่
-            </label>
-            <input
-              type="date"
-              value={searchEnd}
-              onChange={(e) => setSearchEnd(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-            />
-          </div>
-
-          {/* ค้นหาชื่อ */}
-          <div className="flex flex-col flex-1 min-w-[200px]">
-            <label className="text-sm font-medium text-gray-600 mb-1">
-              ชื่อผู้มาติดต่อ
-            </label>
-            <input
-              type="text"
-              placeholder="🔎 พิมพ์ชื่อเพื่อตรวจสอบ..."
-              value={searchName}
-              onChange={(e) => setSearchName(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-            />
-          </div>
-          <br />
-
-          {/* ปุ่มคำสั่ง */}
-          <div className="flex flex-wrap gap-3 mt-2">
-            <button
-              onClick={() => loadVisitors(searchStart, searchEnd, searchName)}
-              className="ml-8 custom-btn bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600 active:scale-[.98] transition"
-              style={{ marginRight: 10 }}
-            >
-               ค้นหา
-            </button>
-
-            <button
-              onClick={showToday}
-              className="ml-8 custom-btn bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600 active:scale-[.98] transition"
-              style={{ marginRight: 10 }}
-            >
-               เฉพาะวันนี้
-            </button>
-
-            <button
-              onClick={showAll}
-              className="ml-8 custom-btn bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600 active:scale-[.98] transition"
-              style={{ marginRight: 10 }}
-            >
-               แสดงทั้งหมด
-            </button>
-
-            <button
-              onClick={showUncheckout}
-              className="ml-8 custom-btn bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600 active:scale-[.98] transition"
-              style={{ marginRight: 10 }}
-            >
-               ยังไม่เช็คเอาท์
-            </button>
-
-            <button
-              onClick={() => exportToExcel(selectedIds)}
-              className="ml-8 custom-btn bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600 active:scale-[.98] transition"
-              style={{ marginRight: 10 }}
-            >
-               Export Excel
-            </button>
-
-            <button
-              onClick={() => deleteVisitor(selectedIds)}
-              className="ml-8 custom-btn bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600 active:scale-[.98] transition"
-              style={{ marginRight: 10 }}
-            >
-               ลบ
-            </button>
-
-            <button
-              onClick={() => navigate("/")}
-              className="ml-8 custom-btn bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600 active:scale-[.98] transition"
-              style={{ marginRight: 10 }}
-            >
-               หน้าหลัก
-            </button>
-          </div>
-          <br />
+      <div className="container mx-auto px-4 py-6 space-y-6">
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card title="วันนี้เช็คอิน" value={countToday} icon={<Users />} color="indigo" />
+          <Card title="ยังอยู่ในพื้นที่" value={countUncheckout} icon={<Clock />} color="pink" dot />
+          <Card title="เช็คเอาท์วันนี้" value={countCheckoutToday} icon={<CheckCircle />} color="emerald" />
+          <Card title="รวมตามตัวกรอง" value={countRange} icon={<Calendar />} color="amber" />
         </div>
-      </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto shadow rounded border noprint">
-        <table className="table-auto w-full border-collapse text-sm">
-          <thead className="bg-indigo-600 text-white">
-            <tr>
-              <th className="border px-3 py-2 text-center">
-                <input
-                  type="checkbox"
-                  checked={
-                    selectedIds.length === visitors.length &&
-                    visitors.length > 0
-                  }
-                  onChange={toggleSelectAll}
-                />
-              </th>
-              <th className="border px-3 py-2">ID</th>
-              <th className="border px-3 py-2">ชื่อ</th>
-              <th className="border px-3 py-2">บริษัท</th>
-              <th className="border px-3 py-2">ติดต่อ</th>
-              <th className="border px-3 py-2">ประสงค์</th>
-              <th className="border px-3 py-2">เวลาเข้า</th>
-              <th className="border px-3 py-2">เวลาออก</th>
-              <th className="border px-3 py-2">สถานะ</th>
-              <th className="border px-3 py-2">พิมพ์</th>
-              <th className="border px-3 py-2">ลบ</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visitors.map((v) => (
-              <tr
-                key={v.id}
-                className={`hover:bg-gray-50 ${
-                  selectedIds.includes(v.id) ? "bg-yellow-50" : ""
-                }`}
-              >
-                <td className="border px-3 py-2 text-center">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.includes(v.id)}
-                    onChange={() => toggleSelect(v.id)}
-                  />
-                </td>
-                <td className="border px-3 py-2">{v.id}</td>
-                <td className="border px-3 py-2">{v.full_name}</td>
-                <td className="border px-3 py-2">{v.company}</td>
-                <td className="border px-3 py-2">{v.contact_person}</td>
-                <td className="border px-3 py-2">
-                  {translatePurpose(v.purpose, v.other_purpose)}
-                </td>
-                <td className="border px-3 py-2">
-                  {formatDateTime(v.checkin_time)}
-                </td>
-                <td className="border px-3 py-2">
-                  {v.checkout_time ? (
-                    formatDateTime(v.checkout_time)
-                  ) : (
-                    <span className="text-gray-400">—</span>
-                  )}
-                </td>
+        {/* Filters */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <Input label="จากวันที่" type="date" value={searchStart} onChange={e => setSearchStart(e.target.value)} />
+            <Input label="ถึงวันที่" type="date" value={searchEnd} onChange={e => setSearchEnd(e.target.value)} />
+            <Input label="ค้นหาชื่อ" type="text" value={searchName} onChange={e => setSearchName(e.target.value)} icon={<Search size={18}/>} />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Btn onClick={showToday} label="วันนี้" color="indigo" icon={<Calendar size={16}/>} />
+            <Btn onClick={showAll} label="ทั้งหมด" color="blue" icon={<Users size={16}/>} />
+            <Btn onClick={exportToExcel} label="Export Excel" color="emerald" icon={<Download size={16}/>} />
+            <Btn onClick={() => deleteVisitor(selectedIds)} label={`ลบ (${selectedIds.length})`} color="red" icon={<Trash2 size={16}/>} />
+          </div>
+        </div>
 
-                <td className="border px-3 py-2 text-center">
-                  {!v.checkout_time ? (
-                    <button
-                      onClick={() => checkOut(v.id)}
-                      className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
-                    >
-                      เช็คเอาท์
-                    </button>
-                  ) : (
-                    <span className="text-green-600 font-bold">✔ ออกแล้ว</span>
-                  )}
-                </td>
-                <td className="border px-3 py-2 text-center">
-                  <a
-                    href={`/print/${v.id}`}
-                    target="_blank"
-                    className="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300"
-                  >
-                    พิมพ์
-                  </a>
-                </td>
-                <td className="border px-3 py-2 text-center">
-                  <button
-                    onClick={() => deleteVisitor([v.id])}
-                    className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-                  >
-                    ลบ
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {visitors.length === 0 && (
-              <tr>
-                <td colSpan={11} className="text-center text-gray-500 py-6">
-                  — ไม่มีข้อมูล —
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        {/* Table */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-indigo-600 text-white">
+                <tr>
+                  <th className="p-4"><input type="checkbox" onChange={toggleSelectAll} checked={selectedIds.length === visitors.length && visitors.length > 0} /></th>
+                  <th className="p-4">ID</th>
+                  <th className="p-4">ชื่อ</th>
+                  <th className="p-4">บริษัท</th>
+                  <th className="p-4">วัตถุประสงค์</th>
+                  <th className="p-4">เวลาเข้า</th>
+                  <th className="p-4">เวลาออก</th>
+                  <th className="p-4">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {visitors.map(v => (
+                  <tr key={v.id} className={selectedIds.includes(v.id) ? "bg-indigo-50" : ""}>
+                    <td className="p-4"><input type="checkbox" checked={selectedIds.includes(v.id)} onChange={() => toggleSelect(v.id)} /></td>
+                    <td className="p-4">#{String(v.id).padStart(4, "0")}</td>
+                    <td className="p-4">
+                      {editingId === v.id ? 
+                        <input className="border p-1 rounded" value={editForm.full_name} onChange={e => setEditForm({...editForm, full_name: e.target.value})} /> 
+                        : v.full_name}
+                    </td>
+                    <td className="p-4">{v.company}</td>
+                    <td className="p-4"><span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">{translatePurpose(v.purpose, v.other_purpose)}</span></td>
+                    <td className="p-4 text-sm">{formatDateTime(v.checkin_time)}</td>
+                    <td className="p-4 text-sm">{v.checkout_time ? formatDateTime(v.checkout_time) : "—"}</td>
+                    <td className="p-4">
+                      <div className="flex gap-2">
+                        {editingId === v.id ? (
+                          <>
+                            <button onClick={saveEdit} className="p-2 bg-green-500 text-white rounded-lg"><Save size={16}/></button>
+                            <button onClick={() => setEditingId(null)} className="p-2 bg-gray-500 text-white rounded-lg"><X size={16}/></button>
+                          </>
+                        ) : (
+                          <>
+                            {!v.checkout_time && <button onClick={() => checkOut(v.id)} className="p-2 bg-emerald-500 text-white rounded-lg" title="เช็คเอาท์"><CheckCircle size={16}/></button>}
+                            <button onClick={() => startEdit(v)} className="p-2 bg-blue-500 text-white rounded-lg"><Edit size={16}/></button>
+                            <button onClick={() => window.open(`/print/${v.id}`, "_blank")} className="p-2 bg-gray-500 text-white rounded-lg"><Printer size={16}/></button>
+                            <button onClick={() => deleteVisitor([v.id])} className="p-2 bg-red-500 text-white rounded-lg"><Trash2 size={16}/></button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
+
+// Sub-components เพื่อความสะอาดของโค้ด
+const Card = ({ title, value, icon, color, dot }) => (
+  <div className={`bg-white p-5 rounded-2xl shadow-sm border border-${color}-100 flex items-center justify-between`}>
+    <div>
+      <p className="text-sm text-gray-500">{title}</p>
+      <p className={`text-3xl font-bold text-${color}-600`}>{value}</p>
+    </div>
+    <div className={`w-12 h-12 bg-${color}-50 rounded-xl flex items-center justify-center text-${color}-600 relative`}>
+      {icon}
+      {dot && <span className="absolute top-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white animate-pulse"></span>}
+    </div>
+  </div>
+);
+
+const Input = ({ label, icon, ...props }) => (
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+    <div className="relative">
+      {icon && <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">{icon}</div>}
+      <input {...props} className={`w-full border rounded-xl p-2 ${icon ? 'pl-10' : ''}`} />
+    </div>
+  </div>
+);
+
+const Btn = ({ label, color, icon, onClick }) => (
+  <button onClick={onClick} className={`px-4 py-2 bg-${color}-600 text-white rounded-xl flex items-center gap-2 hover:opacity-90 transition-opacity shadow-sm`}>
+    {icon} {label}
+  </button>
+);

@@ -1,13 +1,13 @@
-// App.jsx
+// App.jsx - Modern Version
 import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "./supabaseClient";
 import { DEFAULT_FIELDS } from "./config";
+const LOGO_URL = import.meta.env.VITE_LOGO_URL || "/logo/f.png"
 import QRCode from "qrcode";
 
 const ORG = import.meta.env.VITE_ORG_NAME || "Just-iD Visitor";
 const SITE = import.meta.env.VITE_SITE_NAME || "Global Securitech";
 
-/** ช่องที่ "จำเป็นต้องกรอก" (จะตรวจเฉพาะช่องที่เปิดใช้งานอยู่จริงใน fields เท่านั้น) */
 const REQUIRED_FIELDS = {
   id_type: true,
   id_number: true,
@@ -23,7 +23,6 @@ const REQUIRED_FIELDS = {
   note: false,
 };
 
-/** mapping label ภาษาไทยสำหรับทำ error message */
 const labelOf = (key) =>
   ({
     id_type: "ประเภทบัตร",
@@ -51,7 +50,7 @@ export default function App() {
     phone: "",
     contact_person: "",
     purpose: "",
-    otherPurpose: "", // ✅ เพิ่มใน state
+    otherPurpose: "",
     vehicle_plate: "",
     vehicle_type: "",
     chip_serial: "",
@@ -60,19 +59,15 @@ export default function App() {
 
   const [photoDataUrl, setPhotoDataUrl] = useState("");
   const [loading, setLoading] = useState(false);
-  const [lang, setLang] = useState("th");
-
   const [visitors, setVisitors] = useState([]);
-
-  // validate & guide states
   const [errors, setErrors] = useState({});
-  const firstErrorRef = useRef(null);
   const [showSuggest, setShowSuggest] = useState(false);
   const [facingMode, setFacingMode] = useState("environment");
-
   const [showGuide, setShowGuide] = useState(
     () => localStorage.getItem("vms_hide_guide") !== "1"
   );
+  const [showSettings, setShowSettings] = useState(false);
+  const [cameraActive, setCameraActive] = useState(true);
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -84,8 +79,9 @@ export default function App() {
   }, []);
 
   // Init webcam
-  // Init webcam
   useEffect(() => {
+    if (!cameraActive) return;
+
     (async () => {
       try {
         if (streamRef.current) {
@@ -93,7 +89,7 @@ export default function App() {
         }
 
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode }, // ✅ ใช้ค่า state
+          video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
           audio: false,
         });
         streamRef.current = stream;
@@ -107,9 +103,8 @@ export default function App() {
       if (streamRef.current)
         streamRef.current.getTracks().forEach((t) => t.stop());
     };
-  }, [facingMode]); // ✅ เปลี่ยนกล้องเมื่อ state เปลี่ยน
+  }, [facingMode, cameraActive]);
 
-  // Load latest visitors
   const loadVisitors = async () => {
     const { data, error } = await supabase
       .from("visitors")
@@ -118,11 +113,11 @@ export default function App() {
       .limit(50);
     if (!error) setVisitors(data || []);
   };
+
   useEffect(() => {
     loadVisitors();
   }, []);
 
-  // Realtime subscribe
   useEffect(() => {
     const channel = supabase
       .channel("visitors-changes")
@@ -142,13 +137,22 @@ export default function App() {
   const takeSnapshot = () => {
     const video = videoRef.current;
     if (!video) return;
-    const cv = document.createElement("canvas");
-    cv.width = video.videoWidth || 640;
-    cv.height = video.videoHeight || 480;
-    const ctx = cv.getContext("2d");
-    ctx.drawImage(video, 0, 0, cv.width, cv.height);
-    const url = cv.toDataURL("image/jpeg", 0.9);
+    
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const url = canvas.toDataURL("image/jpeg", 0.9);
     setPhotoDataUrl(url);
+    
+    // ปิดกล้องทันทีหลังถ่ายเพื่อแสดงภาพแทน
+    setCameraActive(false);
+  };
+
+  const retakePhoto = () => {
+    setPhotoDataUrl("");
+    setCameraActive(true);
   };
 
   const uploadPhoto = async (visitorId) => {
@@ -166,7 +170,6 @@ export default function App() {
     return data?.publicUrl || null;
   };
 
-  /** ตรวจความครบถ้วน (คำนึงถึงช่องที่เปิดใช้งานอยู่จริง) */
   const validateForm = () => {
     const _errors = {};
 
@@ -182,10 +185,8 @@ export default function App() {
       }
     });
 
-    // ✅ บังคับรูปถ่ายด้วย
     if (!photoDataUrl) {
-      _errors.photo =
-        "กรุณาถ่ายภาพ บัตรประชาชน/ใบขับขี่/เอกสารอื่นๆ ก่อนบันทึก";
+      _errors.photo = "กรุณาถ่ายภาพบัตรประชาชน/เอกสารก่อนบันทึก";
     }
 
     setErrors(_errors);
@@ -194,7 +195,6 @@ export default function App() {
       const firstKey = Object.keys(_errors)[0];
       const el = document.querySelector(`[data-field="${firstKey}"]`);
       if (el) {
-        firstErrorRef.current = el;
         setTimeout(() => el.focus({ preventScroll: false }), 0);
         el.scrollIntoView({ behavior: "smooth", block: "center" });
       }
@@ -207,17 +207,8 @@ export default function App() {
     e.preventDefault();
     if (!validateForm()) return;
 
-    // ✅ ถ้าไม่มีรูป ห้ามบันทึก
-    // if (!photoDataUrl) {
-    //   alert(
-    //     "กรุณาถ่ายภาพ บัตรประชาชน/ใบขับขี่ ก่อนบันทึกสลิป (เฉพาะด้านหน้าบัตร)"
-    //   );
-    //   return;
-    // }
-
     setLoading(true);
     try {
-      // QR ชั่วคราวก่อนมี id
       const payload = {
         full_name: form.full_name,
         id_number: form.id_number,
@@ -236,7 +227,7 @@ export default function App() {
           phone: form.phone,
           contact_person: form.contact_person,
           purpose: form.purpose,
-          other_purpose: form.otherPurpose || null, // ✅ map ค่าไปที่ DB
+          other_purpose: form.otherPurpose || null,
           vehicle_plate: form.vehicle_plate,
           vehicle_type: form.vehicle_type,
           chip_serial: form.chip_serial,
@@ -250,7 +241,6 @@ export default function App() {
 
       if (error) throw error;
 
-      // ✅ Upload รูปถ่าย
       const photoUrl = await uploadPhoto(data.id);
       if (photoUrl) {
         await supabase
@@ -259,7 +249,6 @@ export default function App() {
           .eq("id", data.id);
       }
 
-      // ✅ อัปเดต QR ให้มี id จริง
       const qrFinal = await QRCode.toDataURL(
         JSON.stringify({
           id: data.id,
@@ -272,12 +261,10 @@ export default function App() {
         .update({ qr_data: qrFinal })
         .eq("id", data.id);
 
-      // ✅ บันทึกข้อมูลคนที่ลงทะเบียนไว้ใน localStorage
       let savedVisitors = JSON.parse(
         localStorage.getItem("recent_visitors") || "[]"
       );
 
-      // เก็บทั้ง object form (จะได้ auto-fill ได้หลาย field ไม่ใช่แค่ชื่อ)
       const visitorData = {
         full_name: form.full_name,
         phone: form.phone,
@@ -287,7 +274,6 @@ export default function App() {
         other_purpose: form.otherPurpose || "",
       };
 
-      // ตรวจซ้ำตามชื่อ
       const exists = savedVisitors.find(
         (v) => v.full_name === visitorData.full_name
       );
@@ -296,7 +282,6 @@ export default function App() {
         localStorage.setItem("recent_visitors", JSON.stringify(savedVisitors));
       }
 
-      // ✅ reset form หลังบันทึก
       setForm({
         id_type: "citizen",
         id_number: "",
@@ -306,7 +291,7 @@ export default function App() {
         phone: "",
         contact_person: "",
         purpose: "",
-        otherPurpose: "", // reset ค่า
+        otherPurpose: "",
         vehicle_plate: "",
         vehicle_type: "",
         chip_serial: "",
@@ -314,24 +299,16 @@ export default function App() {
       });
 
       setPhotoDataUrl("");
+      setCameraActive(true);
       setErrors({});
       await loadVisitors();
 
-      // ✅ เปิดสลิปพิมพ์
       window.open(`/print/${data.id}`, "_blank");
     } catch (err) {
       alert("บันทึกไม่สำเร็จ: " + err.message);
     } finally {
       setLoading(false);
     }
-  };
-
-  const checkOut = async (id) => {
-    await supabase
-      .from("visitors")
-      .update({ checkout_time: new Date().toISOString() })
-      .eq("id", id);
-    loadVisitors();
   };
 
   const toggleField = (key) =>
@@ -342,605 +319,975 @@ export default function App() {
     if (dontShowAgain) localStorage.setItem("vms_hide_guide", "1");
   };
 
+  
+
   return (
-    <div className="container">
-      {/* inline CSS สำหรับ error & modal */}
+    <div className="app-container">
       <style>{`
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+
         :root {
-  --primary:#000;      /* ใช้สีดำแทน */
-  --primary-hover:#222; 
-  --danger:#e23;       /* แดงเอาไว้เตือน */
-  --ring:#999;
-  --text:#222;
-  --muted:#666;
-  --bg:#fff;
-  --bg-soft:#f7f7f7;
+          --primary: #2563eb;
+          --primary-hover: #1d4ed8;
+          --primary-light: #dbeafe;
+          --danger: #dc2626;
+          --danger-hover: #b91c1c;
+          --success: #16a34a;
+          --warning: #f59e0b;
+          --text: #1f2937;
+          --text-light: #6b7280;
+          --bg: #ffffff;
+          --bg-secondary: #f9fafb;
+          --border: #e5e7eb;
+          --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+          --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+          --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+          --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+          --radius: 12px;
+          --radius-lg: 16px;
+        }
+
+      body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
+    'Oxygen', 'Ubuntu', sans-serif;
+
+  min-height: 100vh;
+  line-height: 1.6;
+  color: var(--text);
+
+  background: url("/logo/r.jpg") center / cover no-repeat fixed;
 }
 
-/* input error */
-.input.error {
-  border:1px solid var(--danger);
-  box-shadow:0 0 0 3px rgba(226,35,67,.12);
-}
-.error-text {
-  color:var(--danger);
-  margin-top:4px;
-  display:inline-block;
-  font-size:13px;
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  backdrop-filter: blur(10px);
+  background: rgba(0,0,0,0.35);
+  z-index: -1;
 }
 
-/* modal */
-.modal-backdrop {
-  position:fixed; inset:0;
-  background:rgba(0,0,0,.45);
-  display:grid; place-items:center;
-  z-index:9999;
-}
-.modal {
-  width:min(680px,92vw);
-  background:var(--bg);
-  border-radius:16px;
-  padding:20px;
-  box-shadow:0 20px 60px rgba(0,0,0,.25);
-}
-.modal h3 {
-  margin:0 0 10px;
-  font-size:20px;
-  font-weight:600;
-  color:var(--text);
-}
-.guide { margin:8px 0 0 18px; color:var(--muted); }
 
-/* ปุ่ม */
-.btn {
-  padding:12px;
-  font-size:16px;
-  border-radius:8px;
-  cursor:pointer;
-  font-weight:500;
-  border:1.5px solid var(--primary);
-  background: black;
-  color: white;
-  transition:background .2s,color .2s,box-shadow .2s,transform .02s;
+        .app-container {
+          max-width: 1400px;
+          margin: 0 auto;
+          padding: 20px;
+        }
+
+        /* Header */
+        .header {
+          background: var(--bg);
+          padding: 24px;
+          border-radius: var(--radius-lg);
+          box-shadow: var(--shadow-lg);
+          margin-bottom: 24px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 16px;
+        }
+
+        .header-info {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          align-items: center;
+        }
+
+        .badge {
+          background: var(--primary-light);
+          color: var(--primary);
+          padding: 8px 16px;
+          border-radius: 20px;
+          font-size: 14px;
+          font-weight: 500;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .badge b {
+          font-weight: 600;
+        }
+
+        /* Cards */
+        .card {
+          background: var(--bg);
+          border-radius: var(--radius-lg);
+          padding: 28px;
+          box-shadow: var(--shadow-lg);
+          margin-bottom: 20px;
+        }
+
+        .card h2 {
+          font-size: 24px;
+          font-weight: 700;
+          color: var(--text);
+          margin-bottom: 24px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        /* Form */
+        .form-grid {
+          display: grid;
+          gap: 20px;
+        }
+
+        .form-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+
+        .form-group {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        label {
+          font-weight: 600;
+          font-size: 14px;
+          color: var(--text);
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .required::after {
+          content: "*";
+          color: var(--danger);
+          margin-left: 2px;
+        }
+
+        input, select, textarea {
+          width: 100%;
+          padding: 12px 16px;
+          border: 2px solid var(--border);
+          border-radius: var(--radius);
+          font-size: 15px;
+          transition: all 0.2s;
+          background: var(--bg);
+          color: var(--text);
+        }
+
+        input:focus, select:focus, textarea:focus {
+          outline: none;
+          border-color: var(--primary);
+          box-shadow: 0 0 0 3px var(--primary-light);
+        }
+
+        input.error, select.error, textarea.error {
+          border-color: var(--danger);
+        }
+
+        input.error:focus, select.error:focus, textarea.error:focus {
+          box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+        }
+
+        .error-text {
+          color: var(--danger);
+          font-size: 13px;
+          margin-top: 4px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .error-text::before {
+          content: "⚠";
+        }
+
+        /* Camera Section */
+        .camera-container {
+          position: relative;
+          width: 100%;
+          max-width: 600px;
+          margin: 0 auto;
+          border-radius: var(--radius-lg);
+          overflow: hidden;
+          box-shadow: var(--shadow-xl);
+          background: #000;
+        }
+
+        video, canvas {
+          width: 100%;
+          height: auto;
+          display: block;
+          aspect-ratio: 4/3;
+          object-fit: cover;
+        }
+
+        canvas {
+          position: absolute;
+          top: 0;
+          left: 0;
+        }
+
+        .camera-overlay {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 80%;
+          height: 60%;
+          border: 3px dashed rgba(255, 255, 255, 0.6);
+          border-radius: var(--radius);
+          pointer-events: none;
+        }
+
+        .camera-hint {
+          position: absolute;
+          bottom: 20px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: rgba(0, 0, 0, 0.7);
+          color: white;
+          padding: 10px 20px;
+          border-radius: 20px;
+          font-size: 14px;
+          backdrop-filter: blur(10px);
+        }
+
+        .camera-controls {
+          display: flex;
+          gap: 12px;
+          margin-top: 16px;
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+
+        /* Buttons */
+        .btn {
+          padding: 12px 24px;
+          border-radius: var(--radius);
+          font-size: 15px;
+          font-weight: 600;
+          cursor: pointer;
+          border: none;
+          transition: all 0.2s;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          white-space: nowrap;
+        }
+
+        .btn-primary {
+          background: var(--primary);
+          color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+          background: var(--primary-hover);
+          transform: translateY(-1px);
+          box-shadow: var(--shadow-md);
+        }
+
+        .btn-secondary {
+          background: var(--bg-secondary);
+          color: var(--text);
+          border: 2px solid var(--border);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+          background: white;
+          border-color: var(--primary);
+          color: var(--primary);
+        }
+
+        .btn-danger {
+          background: var(--danger);
+          color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+          background: var(--danger-hover);
+        }
+
+        .btn-success {
+          background: var(--success);
+          color: white;
+        }
+
+        .btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .btn-icon {
+          padding: 10px;
+          width: 40px;
+          height: 40px;
+        }
+
+        /* Settings Toggle */
+        .settings-toggle {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+          padding: 16px;
+          background: var(--bg-secondary);
+          border-radius: var(--radius);
+        }
+
+        .checkbox-label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 14px;
+          background: white;
+          border: 2px solid var(--border);
+          border-radius: var(--radius);
+          cursor: pointer;
+          transition: all 0.2s;
+          font-size: 14px;
+        }
+
+        .checkbox-label:hover {
+          border-color: var(--primary);
+          background: var(--primary-light);
+        }
+
+        .checkbox-label input[type="checkbox"] {
+          width: 18px;
+          height: 18px;
+          cursor: pointer;
+        }
+
+        /* Autocomplete */
+        .autocomplete-container {
+          position: relative;
+        }
+
+        .autocomplete-list {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          right: 0;
+          background: white;
+          border: 2px solid var(--border);
+          border-top: none;
+          border-radius: 0 0 var(--radius) var(--radius);
+          max-height: 200px;
+          overflow-y: auto;
+          z-index: 1000;
+          box-shadow: var(--shadow-lg);
+        }
+
+        .autocomplete-item {
+          padding: 12px 16px;
+          cursor: pointer;
+          transition: background 0.2s;
+          border-bottom: 1px solid var(--border);
+        }
+
+        .autocomplete-item:last-child {
+          border-bottom: none;
+        }
+
+        .autocomplete-item:hover {
+          background: var(--primary-light);
+        }
+
+        /* Modal */
+        .modal-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.6);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+          padding: 20px;
+          backdrop-filter: blur(4px);
+        }
+
+        .modal {
+          background: white;
+          border-radius: var(--radius-lg);
+          padding: 32px;
+          max-width: 600px;
+          width: 100%;
+          max-height: 90vh;
+          overflow-y: auto;
+          box-shadow: var(--shadow-xl);
+          animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+          from {
+            opacity: 0;
+            transform: translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .modal h3 {
+          font-size: 24px;
+          font-weight: 700;
+          margin-bottom: 20px;
+          color: var(--text);
+        }
+
+        .guide-list {
+          list-style: none;
+          counter-reset: guide-counter;
+          margin: 0;
+          padding: 0;
+        }
+
+        .guide-list li {
+          counter-increment: guide-counter;
+          margin-bottom: 16px;
+          padding-left: 40px;
+          position: relative;
+          color: var(--text-light);
+        }
+
+        .guide-list li::before {
+          content: counter(guide-counter);
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 28px;
+          height: 28px;
+          background: var(--primary);
+          color: white;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 600;
+          font-size: 14px;
+        }
+
+        .guide-list ul {
+          margin-top: 8px;
+          padding-left: 20px;
+        }
+
+        .modal-actions {
+          display: flex;
+          gap: 12px;
+          margin-top: 24px;
+          flex-wrap: wrap;
+        }
+
+        /* Photo hint */
+        .photo-hint {
+          background: var(--primary-light);
+          color: var(--primary);
+          padding: 12px 16px;
+          border-radius: var(--radius);
+          font-size: 14px;
+          margin-bottom: 16px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .photo-hint::before {
+          content: "💡";
+          font-size: 18px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+          .app-container {
+            padding: 12px;
+          }
+
+          .header {
+            padding: 16px;
+            flex-direction: column;
+            align-items: stretch;
+          }
+
+          .card {
+            padding: 20px;
+          }
+
+          .card h2 {
+            font-size: 20px;
+          }
+
+          .form-row {
+            grid-template-columns: 1fr;
+          }
+
+          .modal {
+            padding: 24px;
+          }
+
+          .camera-controls {
+            flex-direction: column;
+          }
+
+          .btn {
+            width: 100%;
+          }
+        }
+
+        @media (min-width: 769px) and (max-width: 1024px) {
+          .form-row {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        /* Print styles */
+        @media print {
+          .noprint {
+            display: none !important;
+          }
+        }
+
+        /* Loading spinner */
+        .spinner {
+          border: 3px solid var(--border);
+          border-top: 3px solid var(--primary);
+          border-radius: 50%;
+          width: 20px;
+          height: 20px;
+          animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        .header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
-.btn1 {
-  padding:12px;
-  font-size:16px;
-  border-radius:8px;
-  cursor:pointer;
-  font-weight:500;
-  border:1.5px solid var(--primary);
-  background: white;
-  color: black;
-  transition:background .2s,color .2s,box-shadow .2s,transform .02s;
-}
-.btn:hover {
- background:white;
-  color:#456882;
-  transform:translateY(-1px);
-  border:1.5px solid #456882;
-  box-shadow:0 4px 8px rgba(0,0,0,.12);
-}
-.btn1:hover {
-  background:white;
-  color:#456882;
-  transform:translateY(-1px);
-  border:1.5px solid #456882;
-  box-shadow:0 4px 8px rgba(0,0,0,.12);
-}
-.btn:active { transform:translateY(0); }
-.btn:focus-visible {
-  outline:none;
-  box-shadow:0 0 0 3px rgba(0,0,0,.25);
+  
+        
+        .header-logo {
+  height: 100px;
+  width: 100px;
+  object-fit: contain;
+  flex-shrink: 0;
+  align-self: center;
 }
 
-/* ปุ่มขอบ */
-.btn.outline {
-  background:var(--bg);
-  border:1.5px solid var(--primary);
-  color:black;
-}
-.btn.outline:hover {
-  background:white;
-  color:#000;
+.header-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-/* ปุ่ม danger */
-.btn.danger {
-  border:1.5px solid #000;
-  color:var(--danger);
-}
-.btn.danger:hover {
-  background:white;
-  color:red;
-}
-
-/* ป้ายบอก / hint */
-.photo-hint {
-  font-size:13px;
-  color:var(--muted);
-  background:var(--bg-soft);
-  border:1px dashed #ccc;
-  padding:8px 10px;
-  border-radius:8px;
-  margin-top:6px;
-}
-
-/* layout ปุ่มในโซนภาพถ่าย */
-.btn-col {
-  width:100%;
-  max-width:320px;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-
-@media (max-width:768px){
-  .btn {
-    width:100%;
-    font-size:18px;
-    padding:14px;
+@media (max-width: 640px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
   }
-}
 
-}
+  .header-info {
+    gap: 10px;
+  }
+
+  .header-logo {
+    height: 32px;
+    width: 32px;
+  }
+
+  .site-badge {
+    font-size: 13px;
+  }
 
  
 
+ 
+  
+
       `}</style>
 
-      <div className="row noprint" style={{ marginBottom: 12 }}>
-        <div className="badge">
-          องค์กร: <b>{ORG}</b>
-        </div>
-        <div className="badge">
-          สถานที่: <b>{SITE}</b>
-        </div>
-        <div className="badge">
-          กล้อง: <span className="kbd">อนุญาต</span> เพื่อถ่ายภาพ
-        </div>
-        <button
-          type="button"
-          className="btn outline"
-          style={{ marginLeft: "auto" }}
-          onClick={() => setShowGuide(true)}
-        >
-          📘 ไกด์ก่อนลงทะเบียน
-        </button>
-      </div>
+      {/* Header */}
+     <div className="header noprint">
+  <div className="header-info">
+    <img
+      src={LOGO_URL}
+      alt="logo"
+      className="header-logo"
+    />
 
-      <div className="grid noprint">
-        {/* ฟอร์มลงทะเบียน */}
-        <div className="card">
-          <h2>ลงทะเบียนผู้มาติดต่อ (Check-in)</h2>
-          <form onSubmit={onSubmit}>
-            {/* {recentVisitors.length > 0 && (
-    <div style={{ marginBottom: 8 }}>
-      <label>เลือกผู้มาติดต่อที่เคยลงทะเบียน</label>
-      <select
-        onChange={(e) => {
-          const name = e.target.value
-          if (name) {
-            // หา object visitor ที่เคยบันทึกไว้
-            const selected = recentVisitors.find(v => v.full_name === name)
-            if (selected) {
-              setForm((f) => ({
-                ...f,
-                ...selected, // ✅ เติมค่า field ที่เคยลงไว้
-              }))
-            }
-          }
-        }}
-      >
-        <option value="">-- เลือกชื่อ --</option>
-        {recentVisitors.map((v, i) => (
-          <option key={i} value={v.full_name}>
-            {v.full_name}
-          </option>
-        ))}
-      </select>
+    <div className="header-text">
+      <div className="site-badge">
+        📍 <b style={{fontSize: 20}} >{SITE} </b><br />
+        <b style={{fontSize: 13}}>9/19 หมู่ 4 ตำบลเหมือง อำเภอเมืองชลบุรี จ.ชลบุรี 20130</b>
+      </div>
     </div>
-  )} */}
+  </div>
+
+  <button
+    type="button"
+    className="btn btn-secondary guide-btn"
+    onClick={() => setShowGuide(true)}
+  >
+    📘 <span>คู่มือการใช้งาน</span>
+  </button>
+</div>
+
+
+      {/* Main Form */}
+      <div className="card noprint">
+        <h2>📝 ลงทะเบียนผู้มาติดต่อ</h2>
+        
+        <form onSubmit={onSubmit} className="form-grid">
+          {/* Basic Info */}
+          <div className="form-row">
             {fields.id_type && (
-              <>
-                <label>ประเภทบัตร</label>
+              <div className="form-group">
+                <label className="required">ประเภทบัตร</label>
                 <select
                   data-field="id_type"
-                  className={errors.id_type ? "input error" : "input"}
-                  aria-invalid={!!errors.id_type}
+                  className={errors.id_type ? "error" : ""}
                   value={form.id_type}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, id_type: e.target.value }))
-                  }
+                  onChange={(e) => setForm((f) => ({ ...f, id_type: e.target.value }))}
                 >
                   <option value="citizen">บัตรประชาชน</option>
                   <option value="driver">ใบขับขี่</option>
                   <option value="other">อื่น ๆ</option>
                 </select>
-                {errors.id_type && (
-                  <small className="error-text">{errors.id_type}</small>
-                )}
-              </>
-            )}
-
-            {fields.id_number && (
-              <>
-                <label>หมายเลขบัตร</label>
-                <input
-                  data-field="id_number"
-                  aria-invalid={!!errors.id_number}
-                  className={errors.id_number ? "input error" : "input"}
-                  value={form.id_number}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, id_number: e.target.value }))
-                  }
-                />
-                {errors.id_number && (
-                  <small className="error-text">{errors.id_number}</small>
-                )}
-              </>
-            )}
-
-            {fields.full_name && (
-              <div style={{ position: "relative" }}>
-                <label>ชื่อ-นามสกุล</label>
-                <input
-                  data-field="full_name"
-                  aria-invalid={!!errors.full_name}
-                  className={errors.full_name ? "input error" : "input"}
-                  value={form.full_name}
-                  onChange={(e) => {
-                    setForm((f) => ({ ...f, full_name: e.target.value }));
-                    setShowSuggest(true); // ✅ โชว์ dropdown ทุกครั้งที่พิมพ์
-                  }}
-                />
-
-                {showSuggest && form.full_name && (
-                  <ul
-                    style={{
-                      position: "absolute",
-                      top: "100%",
-                      left: 0,
-                      right: 0,
-                      background: "#fff",
-                      border: "1px solid #ccc",
-                      borderRadius: 4,
-                      margin: 0,
-                      padding: 0,
-                      listStyle: "none",
-                      maxHeight: 150,
-                      overflowY: "auto",
-                      zIndex: 1000,
-                    }}
-                  >
-                    {recentVisitors
-                      .filter((v) =>
-                        v.full_name
-                          .toLowerCase()
-                          .includes(form.full_name.toLowerCase())
-                      )
-                      .map((v, i) => (
-                        <li
-                          key={i}
-                          style={{
-                            padding: "6px 10px",
-                            cursor: "pointer",
-                            borderBottom: "1px solid #eee",
-                          }}
-                          onClick={() => {
-                            setForm((f) => ({
-                              ...f,
-                              ...v, // ✅ autofill ข้อมูลจาก visitor เก่า
-                            }));
-                            setShowSuggest(false); // ✅ ปิด list ทันที
-                          }}
-                        >
-                          {v.full_name}
-                        </li>
-                      ))}
-                  </ul>
-                )}
-
-                {errors.full_name && (
-                  <small className="error-text">{errors.full_name}</small>
-                )}
+                {errors.id_type && <span className="error-text">{errors.id_type}</span>}
               </div>
             )}
 
-            {fields.gender && (
-              <>
+            {fields.id_number && (
+              <div className="form-group">
+                <label className="required">หมายเลขบัตร</label>
+                <input
+                  data-field="id_number"
+                  type="text"
+                  className={errors.id_number ? "error" : ""}
+                  value={form.id_number}
+                  onChange={(e) => setForm((f) => ({ ...f, id_number: e.target.value }))}
+                  placeholder="กรอกหมายเลขบัตรประชาชน"
+                />
+                {errors.id_number && <span className="error-text">{errors.id_number}</span>}
+              </div>
+            )}
+          </div>
+
+          {fields.full_name && (
+            <div className="form-group autocomplete-container">
+              <label className="required">ชื่อ-นามสกุล</label>
+              <input
+                data-field="full_name"
+                type="text"
+                className={errors.full_name ? "error" : ""}
+                value={form.full_name}
+                onChange={(e) => {
+                  setForm((f) => ({ ...f, full_name: e.target.value }));
+                  setShowSuggest(true);
+                }}
+                placeholder="กรอกชื่อ-นามสกุล"
+              />
+              {showSuggest && form.full_name && recentVisitors.length > 0 && (
+                <div className="autocomplete-list">
+                  {recentVisitors
+                    .filter((v) =>
+                      v.full_name.toLowerCase().includes(form.full_name.toLowerCase())
+                    )
+                    .map((v, i) => (
+                      <div
+                        key={i}
+                        className="autocomplete-item"
+                        onClick={() => {
+                          setForm((f) => ({ ...f, ...v }));
+                          setShowSuggest(false);
+                        }}
+                      >
+                        {v.full_name}
+                      </div>
+                    ))}
+                </div>
+              )}
+              {errors.full_name && <span className="error-text">{errors.full_name}</span>}
+            </div>
+          )}
+
+          <div className="form-row">
+            {fields.company && (
+              <div className="form-group">
+                <label>บริษัทต้นสังกัด</label>
+                <input
+                  data-field="company"
+                  type="text"
+                  className={errors.company ? "error" : ""}
+                  value={form.company}
+                  onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
+                  placeholder="ชื่อบริษัท"
+                />
+                {errors.company && <span className="error-text">{errors.company}</span>}
+              </div>
+            )}
+
+            {fields.phone && (
+              <div className="form-group">
+                <label className="required">เบอร์โทรศัพท์</label>
+                <input
+                  data-field="phone"
+                  type="tel"
+                  className={errors.phone ? "error" : ""}
+                  value={form.phone}
+                  onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                  placeholder="0812345678"
+                />
+                {errors.phone && <span className="error-text">{errors.phone}</span>}
+              </div>
+            )}
+          </div>
+
+          <div className="form-row">
+            {fields.contact_person && (
+              <div className="form-group">
+                <label className="required">ผู้ติดต่อภายใน</label>
+                <input
+                  data-field="contact_person"
+                  type="text"
+                  className={errors.contact_person ? "error" : ""}
+                  value={form.contact_person}
+                  onChange={(e) => setForm((f) => ({ ...f, contact_person: e.target.value }))}
+                  placeholder="ชื่อผู้ติดต่อ"
+                />
+                {errors.contact_person && <span className="error-text">{errors.contact_person}</span>}
+              </div>
+            )}
+
+            {fields.purpose && (
+              <div className="form-group">
+                <label className="required">วัตถุประสงค์</label>
+                <select
+                  data-field="purpose"
+                  className={errors.purpose ? "error" : ""}
+                  value={form.purpose}
+                  onChange={(e) => setForm((f) => ({ ...f, purpose: e.target.value }))}
+                >
+                  <option value="">-- เลือกวัตถุประสงค์ --</option>
+                  <option value="meeting">ประชุมงาน</option>
+                  <option value="delivery">ส่งของ</option>
+                  <option value="maintenance">ซ่อมบำรุง</option>
+                  <option value="visit">เยี่ยมชม</option>
+                  <option value="interview">สมัครงาน/สัมภาษณ์</option>
+                  <option value="other">อื่น ๆ</option>
+                </select>
+                {form.purpose === "other" && (
+                  <input
+                    type="text"
+                    style={{ marginTop: 8 }}
+                    className="input"
+                    value={form.otherPurpose}
+                    onChange={(e) => setForm((f) => ({ ...f, otherPurpose: e.target.value }))}
+                    placeholder="โปรดระบุวัตถุประสงค์"
+                  />
+                )}
+                {errors.purpose && <span className="error-text">{errors.purpose}</span>}
+              </div>
+            )}
+          </div>
+
+          {(fields.vehicle_plate || fields.vehicle_type) && (
+            <div className="form-row">
+              {fields.vehicle_plate && (
+                <div className="form-group">
+                  <label>ทะเบียนรถ</label>
+                  <input
+                    data-field="vehicle_plate"
+                    type="text"
+                    className={errors.vehicle_plate ? "error" : ""}
+                    value={form.vehicle_plate}
+                    onChange={(e) => setForm((f) => ({ ...f, vehicle_plate: e.target.value }))}
+                    placeholder="กข 1234"
+                  />
+                  {errors.vehicle_plate && <span className="error-text">{errors.vehicle_plate}</span>}
+                </div>
+              )}
+
+              {fields.vehicle_type && (
+                <div className="form-group">
+                  <label>ประเภทรถ</label>
+                  <input
+                    data-field="vehicle_type"
+                    type="text"
+                    className={errors.vehicle_type ? "error" : ""}
+                    value={form.vehicle_type}
+                    onChange={(e) => setForm((f) => ({ ...f, vehicle_type: e.target.value }))}
+                    placeholder="รถยนต์, มอเตอร์ไซค์"
+                  />
+                  {errors.vehicle_type && <span className="error-text">{errors.vehicle_type}</span>}
+                </div>
+              )}
+            </div>
+          )}
+
+          {fields.gender && (
+            <div className="form-row">
+              <div className="form-group">
                 <label>เพศ</label>
                 <select
                   data-field="gender"
-                  aria-invalid={!!errors.gender}
-                  className={errors.gender ? "input error" : "input"}
+                  className={errors.gender ? "error" : ""}
                   value={form.gender}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, gender: e.target.value }))
-                  }
+                  onChange={(e) => setForm((f) => ({ ...f, gender: e.target.value }))}
                 >
-                  <option value="">-</option>
+                  <option value="">-- ไม่ระบุ --</option>
                   <option value="ชาย">ชาย</option>
                   <option value="หญิง">หญิง</option>
                   <option value="อื่น ๆ">อื่น ๆ</option>
                 </select>
-                {errors.gender && (
-                  <small className="error-text">{errors.gender}</small>
-                )}
-              </>
-            )}
+                {errors.gender && <span className="error-text">{errors.gender}</span>}
+              </div>
 
-            <div className="row">
-              {fields.company && (
-                <div style={{ flex: 1 }}>
-                  <label>บริษัทต้นสังกัด</label>
-                  <input
-                    data-field="company"
-                    aria-invalid={!!errors.company}
-                    className={errors.company ? "input error" : "input"}
-                    value={form.company}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, company: e.target.value }))
-                    }
-                  />
-                  {errors.company && (
-                    <small className="error-text">{errors.company}</small>
-                  )}
-                </div>
-              )}
-              {fields.phone && (
-                <div style={{ flex: 1 }}>
-                  <label>เบอร์โทร</label>
-                  <input
-                    data-field="phone"
-                    aria-invalid={!!errors.phone}
-                    className={errors.phone ? "input error" : "input"}
-                    value={form.phone}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, phone: e.target.value }))
-                    }
-                  />
-                  {errors.phone && (
-                    <small className="error-text">{errors.phone}</small>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="row">
-              {fields.contact_person && (
-                <div style={{ flex: 1 }}>
-                  <label>ผู้ติดต่อภายใน</label>
-                  <input
-                    data-field="contact_person"
-                    aria-invalid={!!errors.contact_person}
-                    className={errors.contact_person ? "input error" : "input"}
-                    value={form.contact_person}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, contact_person: e.target.value }))
-                    }
-                  />
-                  {errors.contact_person && (
-                    <small className="error-text">
-                      {errors.contact_person}
-                    </small>
-                  )}
-                </div>
-              )}
-              {fields.purpose && (
-                <div style={{ flex: 1 }}>
-                  <label>วัตถุประสงค์</label>
-                  <select
-                    data-field="purpose"
-                    aria-invalid={!!errors.purpose}
-                    className={errors.purpose ? "input error" : "input"}
-                    value={form.purpose}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, purpose: e.target.value }))
-                    }
-                  >
-                    <option value="">-- เลือกวัตถุประสงค์ --</option>
-                    <option value="meeting">ประชุมงาน</option>
-                    <option value="delivery">ส่งของ</option>
-                    <option value="maintenance">ซ่อมบำรุง</option>
-                    <option value="visit">เยี่ยมชม</option>
-                    <option value="interview">สมัครงาน/สัมภาษณ์</option>
-                    <option value="other">อื่น ๆ</option>
-                  </select>{" "}
-                  <br />
-                  {/* แสดง input เมื่อเลือก "อื่น ๆ" */}
-                  {form.purpose === "other" && (
-                    <input
-                      style={{ marginTop: 8 }}
-                      type="text"
-                      placeholder="โปรดระบุวัตถุประสงค์"
-                      className="input"
-                      value={form.otherPurpose || ""}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, otherPurpose: e.target.value }))
-                      }
-                    />
-                  )}
-                  {errors.purpose && (
-                    <small className="error-text">{errors.purpose}</small>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="row">
-              {fields.vehicle_plate && (
-                <div style={{ flex: 1 }}>
-                  <label>ทะเบียนรถ</label>
-                  <input
-                    data-field="vehicle_plate"
-                    aria-invalid={!!errors.vehicle_plate}
-                    className={errors.vehicle_plate ? "input error" : "input"}
-                    value={form.vehicle_plate}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, vehicle_plate: e.target.value }))
-                    }
-                  />
-                  {errors.vehicle_plate && (
-                    <small className="error-text">{errors.vehicle_plate}</small>
-                  )}
-                </div>
-              )}
-              {fields.vehicle_type && (
-                <div style={{ flex: 1 }}>
-                  <label>ประเภทรถ</label>
-                  <input
-                    data-field="vehicle_type"
-                    aria-invalid={!!errors.vehicle_type}
-                    className={errors.vehicle_type ? "input error" : "input"}
-                    value={form.vehicle_type}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, vehicle_type: e.target.value }))
-                    }
-                  />
-                  {errors.vehicle_type && (
-                    <small className="error-text">{errors.vehicle_type}</small>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="row">
               {fields.chip_serial && (
-                <div style={{ flex: 1 }}>
-                  <label>Chip Serial (จากเครื่องอ่าน)</label>
+                <div className="form-group">
+                  <label>Chip Serial</label>
                   <input
                     data-field="chip_serial"
-                    aria-invalid={!!errors.chip_serial}
-                    className={errors.chip_serial ? "input error" : "input"}
+                    type="text"
+                    className={errors.chip_serial ? "error" : ""}
                     value={form.chip_serial}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, chip_serial: e.target.value }))
-                    }
+                    onChange={(e) => setForm((f) => ({ ...f, chip_serial: e.target.value }))}
+                    placeholder="รหัสชิป"
                   />
-                  {errors.chip_serial && (
-                    <small className="error-text">{errors.chip_serial}</small>
-                  )}
-                </div>
-              )}
-              {fields.note && (
-                <div style={{ flex: 1 }}>
-                  <label>บันทึกเพิ่มเติม</label>
-                  <input
-                    data-field="note"
-                    aria-invalid={!!errors.note}
-                    className={errors.note ? "input error" : "input"}
-                    value={form.note}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, note: e.target.value }))
-                    }
-                  />
-                  {errors.note && (
-                    <small className="error-text">{errors.note}</small>
-                  )}
+                  {errors.chip_serial && <span className="error-text">{errors.chip_serial}</span>}
                 </div>
               )}
             </div>
+          )}
 
-            <div style={{ marginTop: 12 }}>
-              <label style={{ fontWeight: "bold" }}>ภาพถ่าย</label>
+          {fields.note && (
+            <div className="form-group">
+              <label>บันทึกเพิ่มเติม</label>
+              <textarea
+                data-field="note"
+                rows="3"
+                className={errors.note ? "error" : ""}
+                value={form.note}
+                onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+                placeholder="หมายเหตุเพิ่มเติม..."
+              />
+              {errors.note && <span className="error-text">{errors.note}</span>}
+            </div>
+          )}
 
-              <p className="photo-hint">
-                กรุณาถ่ายภาพ <b>บัตรประชาชน/ใบขับขี่/เอกสารอื่น ๆ</b>{" "}
-                ให้ชัดเจนก่อนกดบันทึก
-              </p>
+          {/* Camera Section */}
+          <div className="form-group">
+            <label className="required">ภาพถ่ายเอกสาร</label>
+            <div className="photo-hint">
+              <span>กรุณาถ่ายภาพ <strong>บัตรประชาชน/ใบขับขี่</strong> ให้ชัดเจนภายในกรอบสี่เหลี่ยม</span>
+            </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 12,
-                  alignItems: "center",
-                }}
-              >
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  style={{
-                    width: "100%",
-                    maxWidth: 320,
-                    height: "auto",
+            <div className="camera-container">
+              {cameraActive && !photoDataUrl ? (
+                <>
+                  <video ref={videoRef} autoPlay playsInline muted />
+                  <div className="camera-overlay"></div>
+                  {/* <div className="camera-hint">วางบัตรให้อยู่ในกรอบ</div> */}
+                </>
+              ) : photoDataUrl ? (
+                <img 
+                  src={photoDataUrl} 
+                  alt="ภาพถ่าย" 
+                  style={{ 
+                    width: "100%", 
+                    height: "auto", 
+                    display: "block",
                     aspectRatio: "4/3",
-                    background: "#000",
-                    borderRadius: 12,
-                  }}
+                    objectFit: "cover"
+                  }} 
                 />
-                {errors.photo && (
-                  <small className="error-text">{errors.photo}</small>
-                )}
-                <div className="btn-col">
-                  <button type="button" className="btn1" onClick={takeSnapshot}>
+              ) : null}
+            </div>
+
+            {errors.photo && <span className="error-text">{errors.photo}</span>}
+
+            <div className="camera-controls">
+              {!photoDataUrl ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={takeSnapshot}
+                  >
                     📸 ถ่ายภาพ
                   </button>
-
                   <button
                     type="button"
-                    className="btn outline danger"
-                    onClick={() => setPhotoDataUrl("")}
-                  >
-                    🗑️ ลบรูป
-                  </button>
-
-                  <button
-                    type="button"
-                    className="btn outline"
-                    onClick={() =>
-                      setFacingMode((m) =>
-                        m === "user" ? "environment" : "user"
-                      )
-                    }
+                    className="btn btn-secondary"
+                    onClick={() => setFacingMode((m) => m === "user" ? "environment" : "user")}
                   >
                     🔄 สลับกล้อง ({facingMode === "user" ? "หน้า" : "หลัง"})
                   </button>
-                </div>
-
-                {photoDataUrl && (
-                  <img
-                    src={photoDataUrl}
-                    style={{
-                      width: "100%",
-                      maxWidth: 320,
-                      height: "auto",
-                      aspectRatio: "4/3",
-                      objectFit: "cover",
-                      borderRadius: 12,
-                      border: "1px solid #ddd",
-                    }}
-                  />
-                )}
-              </div>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="btn btn-success"
+                    onClick={retakePhoto}
+                  >
+                    ✅ ถ่ายใหม่
+                  </button>
+                </>
+              )}
             </div>
+          </div>
 
-            <div style={{ marginTop: 14 }}>
-              <button className="btn" disabled={loading}>
-                {loading ? "กำลังบันทึก..." : "บันทึก & ปริ้นสลิป"}
-              </button>
-            </div>
-          </form>
-        </div>
+          {/* Submit Button */}
+          <button
+            type="submit"
+            className="btn btn-primary"
+            style={{ fontSize: 16, padding: "16px 32px" }}
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <div className="spinner"></div>
+                กำลังบันทึก...
+              </>
+            ) : (
+              "💾 บันทึกและพิมพ์สลิป"
+            )}
+          </button>
+        </form>
+      </div>
 
-        {/* ตั้งค่าฟอร์ม */}
-        <div className="card">
-          <h2>ตั้งค่าฟอร์ม (เปิด/ปิดช่องกรอก)</h2>
-          <div className="row" style={{ gap: 12 }}>
+      {/* Settings Card */}
+      <div className="card noprint">
+        <h2>
+          ⚙️ ตั้งค่าฟอร์ม
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ marginLeft: "auto", fontSize: 14 }}
+            onClick={() => setShowSettings(!showSettings)}
+          >
+            {showSettings ? "ซ่อน" : "แสดง"}
+          </button>
+        </h2>
+
+        {showSettings && (
+          <div className="settings-toggle">
             {Object.keys(fields).map((k) => (
-              <label
-                key={k}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  border: "1px solid #eee",
-                  padding: 6,
-                  borderRadius: 10,
-                }}
-              >
+              <label key={k} className="checkbox-label">
                 <input
                   type="checkbox"
                   checked={fields[k]}
@@ -950,104 +1297,36 @@ export default function App() {
               </label>
             ))}
           </div>
-
-          <div style={{ marginTop: 14 }}>
-            <p className="badge">
-              เคล็ดลับ: ปรับช่องที่ต้องใช้ให้ตรงนโยบาย เช่น
-              ถ้าไม่ต้องการเก็บเพศ/เลขชิป ก็ปิดได้
-            </p>
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* รายการผู้มาติดต่อ */}
-      {/* <div className="card noprint" style={{ marginTop: 16 }}>
-        <h2>รายการผู้มาติดต่อ (Real-time)</h2>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>ชื่อ</th>
-              <th>ติดต่อกับ</th>
-              <th>เวลาเข้า</th>
-              <th>เวลาออก</th>
-              <th>พิมพ์</th>
-              <th>เช็คเอาท์</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visitors.map((v) => (
-              <tr key={v.id}>
-                <td>{v.id}</td>
-                <td>{v.full_name}</td>
-                <td>{v.contact_person}</td>
-                <td>{v.checkin_time ? new Date(v.checkin_time).toLocaleString() : ''}</td>
-                <td>
-                  {v.checkout_time ? (
-                    new Date(v.checkout_time).toLocaleString()
-                  ) : (
-                    <span style={{ color: '#888' }}>—</span>
-                  )}
-                </td>
-                <td>
-                  <a className="btn outline" href={`/print/${v.id}`} target="_blank">
-                    พิมพ์
-                  </a>
-                </td>
-                <td>
-                  {!v.checkout_time ? (
-                    <button className="btn" onClick={() => checkOut(v.id)}>
-                      เช็คเอาท์
-                    </button>
-                  ) : (
-                    <span className="badge">เสร็จสิ้น</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div> */}
-
-      {/* Modal ไกด์ก่อนลงทะเบียน */}
+      {/* Guide Modal */}
       {showGuide && (
-        <div className="modal-backdrop">
-          <div className="modal">
-            <h3>📘 คู่มือก่อนลงทะเบียน</h3>
-            <ol className="guide">
-              <li>
-                เตรียมบัตรประชาชน / ใบขับขี่ หรือเอกสารอื่น ๆ
-                ที่ใช้ยืนยันตัวตนให้พร้อม
-              </li>
-              <li>
-                ถ่ายภาพบัตรประชาชน / ใบขับขี่ และถ่ายภาพผู้มาติดต่อให้ชัดเจน
-              </li>
-              <li>
-                กรอกข้อมูลให้ครบถ้วน ได้แก่:
+        <div className="modal-backdrop" onClick={() => setShowGuide(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>📘 คู่มือลงทะเบียนผู้มาติดต่อ</h3>
+            <ol className="guide-list">
+              <li>เตรียมเอกสาร: บัตรประชาชน ใบขับขี่ หรือเอกสารอื่นๆ ที่ใช้ยืนยันตัวตน</li>
+              <li>ถ่ายภาพเอกสารให้ชัดเจนอยู่ภายในกรอบสี่เหลี่ยม (รองรับกล้องหน้า/หลัง)</li>
+              <li>กรอกข้อมูลที่มีเครื่องหมาย * ให้ครบถ้วน:
                 <ul>
-                  <li>ชื่อ–นามสกุล</li>
-                  <li>เบอร์โทรศัพท์</li>
+                  <li>ชื่อ-นามสกุล</li>
+                  <li>เบอร์โทรศัพท์ (9-10 หลัก)</li>
                   <li>ผู้ติดต่อภายใน</li>
-                  <li>วัตถุประสงค์การเข้าพบ</li>
+                  <li>วัตถุประสงค์</li>
                 </ul>
               </li>
-              <li>หากนำรถเข้าพื้นที่ กรุณากรอกข้อมูลทะเบียนรถ และประเภทรถ</li>
-              <li>
-                ตรวจสอบความถูกต้องของข้อมูลอีกครั้ง ก่อนกดปุ่ม{" "}
-                <b>“บันทึก & ปริ้นสลิป”</b>
-              </li>
-              <li>
-                ท่านสามารถเลือกเปิด/ปิดช่องข้อมูลเพิ่มเติมได้จากเมนู
-                “ตั้งค่าฟอร์ม” ด้านล่าง
-              </li>
+              <li>ถ้านำรถเข้ามา กรุณาระบุทะเบียนรถและประเภทรถ</li>
+              <li>ตรวจสอบความถูกต้องก่อนกดปุ่ม "บันทึกและพิมพ์สลิป"</li>
+              <li>ระบบจะเปิดสลิปใหม่ให้อัตโนมัติหลังบันทึกสำเร็จ</li>
             </ol>
 
-            <div className="row" style={{ gap: 8, marginTop: 12 }}>
-              <button className="btn" onClick={() => closeGuide(false)}>
-                เริ่มลงทะเบียน
+            <div className="modal-actions">
+              <button className="btn btn-primary" onClick={() => closeGuide(false)}>
+                เริ่มใช้งาน
               </button>
-              <button className="btn outline" onClick={() => closeGuide(true)}>
-                ปิด และไม่ต้องโชว์อีก
+              <button className="btn btn-secondary" onClick={() => closeGuide(true)}>
+                ไม่ต้องแสดงอีก
               </button>
             </div>
           </div>
