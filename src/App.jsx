@@ -948,7 +948,7 @@ body::before {
 
       {/* Main Form */}
       <div className="card noprint">
-        <h2>📝 ลงทะเบียนผู้มาติดต่อ</h2>
+        <h2>ลงทะเบียนผู้มาติดต่อ</h2>
         
         <form onSubmit={onSubmit} className="form-grid">
           {/* Basic Info */}
