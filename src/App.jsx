@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "./supabaseClient";
 
-// ตั้งค่า Header
 const ORG_NAME = "T.D.K. INDUSTRIAL";
 const SITE_NAME = "บริษัท ที.ดี.เค.อินดัสเตรียล จำกัด";
 
@@ -16,7 +15,7 @@ export default function App() {
     company: "",
     phone: "",
     contact_person: "",
-    purpose: "ประชุมงาน", // Default เป็นภาษาไทย
+    purpose: "ประชุมงาน",
     other_purpose: ""
   });
 
@@ -24,8 +23,11 @@ export default function App() {
   const streamRef = useRef(null);
 
   useEffect(() => {
-    if (step === 1 && cameraActive) startCamera();
-    else stopCamera();
+    if (step === 1 && cameraActive) {
+      startCamera();
+    } else {
+      stopCamera();
+    }
     return () => stopCamera();
   }, [step, cameraActive]);
 
@@ -42,7 +44,9 @@ export default function App() {
   };
 
   const stopCamera = () => {
-    if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+    }
   };
 
   const takeSnapshot = () => {
@@ -96,146 +100,45 @@ export default function App() {
     setStep(1);
   };
 
+  // ฟังก์ชันย้อนกลับไปแก้ไข โดยไม่ล้างค่า Form
+  const handleEditPhoto = () => {
+    setCameraActive(true);
+    setStep(1);
+  };
+
   return (
     <div className="app-shell">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap');
-        
-        :root {
-          --tdk-blue: #003399;
-          --tdk-blue-light: #004ecc;
-          --tdk-bg: #f0f4f8;
-          --text-main: #1a2b49;
-        }
-
-        body { 
-          margin: 0; 
-          font-family: 'Kanit', sans-serif; 
-          background: var(--tdk-bg);
-          color: var(--text-main);
-        }
-
-        .app-shell {
-          min-height: 100vh;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 20px;
-        }
-
+        :root { --tdk-blue: #003399; --tdk-blue-light: #004ecc; --tdk-bg: #f0f4f8; --text-main: #1a2b49; }
+        body { margin: 0; font-family: 'Kanit', sans-serif; background: var(--tdk-bg); color: var(--text-main); }
+        .app-shell { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; }
         .brand-header { text-align: center; margin: 20px 0 30px; }
-        .logo-text { 
-          font-size: 42px; 
-          font-weight: 800; 
-          color: var(--tdk-blue); 
-          letter-spacing: -1px;
-          line-height: 1;
-        }
-        .site-badge {
-          background: var(--tdk-blue);
-          color: white;
-          padding: 4px 12px;
-          border-radius: 20px;
-          font-size: 14px;
-          display: inline-block;
-          margin-top: 10px;
-        }
-
-        .card {
-          width: 100%;
-          max-width: 500px;
-          background: white;
-          border-radius: 30px;
-          box-shadow: 0 20px 40px rgba(0, 51, 153, 0.1);
-          overflow: hidden;
-          transition: 0.3s;
-        }
-
+        .logo-text { font-size: 42px; font-weight: 800; color: var(--tdk-blue); letter-spacing: -1px; line-height: 1; }
+        .site-badge { background: var(--tdk-blue); color: white; padding: 4px 12px; border-radius: 20px; font-size: 14px; display: inline-block; margin-top: 10px; }
+        .card { width: 100%; max-width: 500px; background: white; border-radius: 30px; box-shadow: 0 20px 40px rgba(0, 51, 153, 0.1); overflow: hidden; transition: 0.3s; }
         .card-body { padding: 32px; }
-
-        .camera-container {
-          position: relative;
-          background: #000;
-          border-radius: 20px;
-          overflow: hidden;
-          aspect-ratio: 4/3;
-          border: 3px solid #e2e8f0;
-        }
+        .camera-container { position: relative; background: #000; border-radius: 20px; overflow: hidden; aspect-ratio: 4/3; border: 3px solid #e2e8f0; }
         video, .snapshot { width: 100%; height: 100%; object-fit: cover; }
-        
-        .id-card-overlay {
-          position: absolute;
-          inset: 0;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          pointer-events: none;
-        }
-        .guide-box {
-          width: 85%;
-          height: 75%;
-          border: 2px dashed rgba(255,255,255,0.6);
-          border-radius: 12px;
-          background: rgba(255,255,255,0.05);
-        }
-        .guide-text {
-          color: white;
-          background: rgba(0,0,0,0.5);
-          padding: 5px 15px;
-          border-radius: 20px;
-          font-size: 13px;
-          margin-top: 15px;
-        }
-
+        .id-card-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+        .guide-box { width: 85%; height: 75%; border: 2px dashed rgba(255,255,255,0.6); border-radius: 12px; background: rgba(255,255,255,0.05); }
         .input-group { margin-bottom: 20px; }
         label { display: block; font-weight: 500; margin-bottom: 8px; color: #4a5568; font-size: 15px; }
-        input, select {
-          width: 100%;
-          padding: 14px 18px;
-          border: 2px solid #edf2f7;
-          border-radius: 15px;
-          font-size: 16px;
-          font-family: inherit;
-          transition: all 0.2s;
-          box-sizing: border-box;
-        }
+        input, select { width: 100%; padding: 14px 18px; border: 2px solid #edf2f7; border-radius: 15px; font-size: 16px; font-family: inherit; transition: all 0.2s; box-sizing: border-box; }
         input:focus { border-color: var(--tdk-blue); outline: none; background: #f8fbff; }
-
-        .btn-action {
-          width: 100%;
-          padding: 18px;
-          border-radius: 18px;
-          font-size: 18px;
-          font-weight: 600;
-          border: none;
-          cursor: pointer;
-          transition: 0.2s;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 10px;
-        }
+        .btn-action { width: 100%; padding: 18px; border-radius: 18px; font-size: 18px; font-weight: 600; border: none; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; }
         .btn-tdk { background: var(--tdk-blue); color: white; }
         .btn-tdk:hover { background: var(--tdk-blue-light); transform: translateY(-2px); }
         .btn-ghost { background: none; color: #718096; text-decoration: underline; margin-top: 10px; font-size: 14px; }
-
         .steps { display: flex; justify-content: center; gap: 8px; margin-bottom: 25px; }
         .step-dot { width: 10px; height: 10px; border-radius: 50%; background: #e2e8f0; }
         .step-dot.active { background: var(--tdk-blue); width: 30px; border-radius: 5px; }
-
         .success-hero { text-align: center; padding: 20px 0; }
-        .check-circle { 
-          width: 80px; height: 80px; border-radius: 50%; background: #c6f6d5; 
-          color: #2f855a; font-size: 40px; display: flex; align-items: center; 
-          justify-content: center; margin: 0 auto 20px;
-        }
-
+        .check-circle { width: 80px; height: 80px; border-radius: 50%; background: #c6f6d5; color: #2f855a; font-size: 40px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }
         .fade { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
 
-      {/* Header Area */}
       <div className="brand-header fade">
         <div className="logo-text">TDK <span style={{fontWeight: 300}}>INDUSTRIAL</span></div>
         <div className="site-badge">{SITE_NAME}</div>
@@ -243,8 +146,6 @@ export default function App() {
 
       <div className="card">
         <div className="card-body">
-          
-          {/* Step Indicators */}
           <div className="steps">
             <div className={`step-dot ${step === 1 ? 'active' : ''}`}></div>
             <div className={`step-dot ${step === 2 ? 'active' : ''}`}></div>
@@ -255,7 +156,7 @@ export default function App() {
             <div className="fade">
               <h2 style={{textAlign: 'center', marginTop: 0, fontSize: '20px'}}>ถ่ายรูปบัตร หรือ นามบัตร</h2>
               <p style={{textAlign: 'center', color: '#718096', fontSize: '14px', marginBottom: 20}}>
-                กรุณาวางบัตรประชาชน ใบขับขี่ หรือนามบัตรให้อยู่ในกรอบ
+                กรุณาวางบัตรประชาชน หรือเอกสารสำคัญให้เห็นชัดเจนในกรอบ
               </p>
               
               <div className="camera-container">
@@ -264,7 +165,6 @@ export default function App() {
                     <video ref={videoRef} autoPlay playsInline muted />
                     <div className="id-card-overlay">
                       <div className="guide-box"></div>
-                      {/* <div className="guide-text">วางบัตรภายในกรอบนี้</div> */}
                     </div>
                   </>
                 ) : (
@@ -280,7 +180,7 @@ export default function App() {
                 ) : (
                   <>
                     <button className="btn-action btn-tdk" onClick={() => setStep(2)}>
-                      ใช้รูปนี้และไปต่อ ➔
+                      ใช้รูปนี้และกรอกข้อมูล ➔
                     </button>
                     <button className="btn-action btn-ghost" onClick={() => setCameraActive(true)}>
                       ถ่ายภาพใหม่อีกครั้ง
@@ -319,19 +219,15 @@ export default function App() {
                 <label>วัตถุประสงค์การเข้าพบ</label>
                 <select value={form.purpose} onChange={e => setForm({...form, purpose: e.target.value})}>
                   <option value="ประชุมงาน">ประชุมงาน</option>
+                  <option value="ส่งสินค้า/รับสินค้า">ส่งสินค้า / รับสินค้า</option>
                   <option value="ซ่อมบำรุง/ติดตั้ง">ซ่อมบำรุง / ติดตั้ง</option>
-                  <option value="แก้ไขปัญหา IT">แก้ไขปัญหา IT</option>
-                  <option value="ติดตั้งระบบ/โปรแกรม">ติดตั้งระบบ / โปรแกรม</option>
                   <option value="อบรม/สอนงาน">อบรม / สอนงาน</option>
                   <option value="ตรวจสอบ/Audit">ตรวจสอบ / Audit</option>
-                  <option value="ตรวจงาน/ตรวจรับ">ตรวจงาน / ตรวจรับ</option>
-                  <option value="นำเสนอขาย/เสนอราคา">นำเสนอขาย / เสนอราคา</option>
-                  <option value="ติดต่อจัดซื้อ">ติดต่อจัดซื้อ</option>
-                  <option value="ติดต่อฝ่ายบุคคล">ติดต่อฝ่ายบุคคล</option>
-                  <option value="ติดต่อผู้บริหาร">ติดต่อผู้บริหาร</option>
+                  <option value="ตรวจงาน/เช็คงาน">ตรวจงาน / เช็คงาน</option>
+                  <option value="ดูงาน/นำเสนอผลงาน">ดูงาน / นำเสนอผลงาน</option>
                   <option value="เข้าเยี่ยมชมบริษัท">เข้าเยี่ยมชมบริษัท</option>
                   <option value="สมัครงาน/สัมภาษณ์">สมัครงาน / สัมภาษณ์</option>
-                  <option value="กรณีฉุกเฉิน">กรณีฉุกเฉิน</option>
+                  <option value="วางบิล/รับเช็ค">วางบิล / รับเช็ค</option>
                   <option value="อื่น ๆ">อื่น ๆ (ระบุเพิ่มเติม)</option>
                 </select>
               </div>
@@ -346,7 +242,7 @@ export default function App() {
               <button type="submit" disabled={loading} className="btn-action btn-tdk" style={{marginTop: 10}}>
                 {loading ? "กำลังบันทึก..." : "ยืนยันการลงทะเบียน"}
               </button>
-              <button type="button" className="btn-action btn-ghost" onClick={() => setStep(1)}>ย้อนกลับ</button>
+              <button type="button" className="btn-action btn-ghost" onClick={handleEditPhoto}>แก้ไขรูปภาพ / ย้อนกลับ</button>
             </form>
           )}
 
@@ -362,7 +258,6 @@ export default function App() {
               </button>
             </div>
           )}
-
         </div>
       </div>
       
