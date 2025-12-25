@@ -23,7 +23,7 @@ import { supabase } from "../supabaseClient";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { useNavigate } from "react-router-dom";
-import bgImage from '../img/n.jpg';
+import bgImage from '../img/g.jpg';
 
 const USERNAME = "1234";
 const PASSWORD = "1234";
