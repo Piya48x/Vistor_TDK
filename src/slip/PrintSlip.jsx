@@ -12,29 +12,38 @@ export default function PrintSlip({ id: propId, inModal = false }) {
   const [v, setV] = useState(null)
   const printedRef = useRef(false)
 
-  useEffect(() => {
-    if (!id) return
-    ;(async () => {
-      const { data, error } = await supabase
-        .from("visitors")
-        .select("*")
-        .eq("id", id)
-        .single()
+// แก้ไขส่วน useEffect ในไฟล์ PrintSlip.jsx
+useEffect(() => {
+  if (!id) return;
 
-      if (!error) {
-        setV(data)
-        if (!inModal) {
-          // auto print เฉพาะเวลาเข้าผ่าน route
-          setTimeout(() => {
-            if (!printedRef.current) {
-              window.print()
-              printedRef.current = true
-            }
-          }, 500)
-        }
+  const fetchData = async () => {
+    const { data, error } = await supabase
+      .from("visitors")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (!error && data) {
+      setV(data);
+      
+      if (!inModal) {
+        // หน่วงเวลา 800ms เพื่อให้รูปภาพและ Layout โหลดเสร็จก่อน
+        setTimeout(() => {
+          if (!printedRef.current) {
+            window.print(); // สั่งพิมพ์
+            printedRef.current = true;
+            
+            // ปิดหน้าต่างทันทีหลังจากส่งงานเข้าเครื่องพิมพ์ (เมื่อใช้ร่วมกับ --kiosk-printing)
+            setTimeout(() => {
+              window.close(); 
+            }, 500);
+          }
+        }, 800); 
       }
-    })()
-  }, [id, inModal])
+    }
+  };
+  fetchData();
+}, [id, inModal]);
 
   function translatePurpose(purpose, otherPurpose) {
     const dict = {
@@ -61,7 +70,7 @@ export default function PrintSlip({ id: propId, inModal = false }) {
     }).format(new Date(dateString))
   }
 
-  if (!v) return <div style={{ padding: 40 }}>กำลังโหลด...</div>
+  if (!v) return <div style={{ padding: 40 }}>กำลังจัดเตรียมสลิป...</div>
 
   return (
     <div
@@ -76,12 +85,18 @@ export default function PrintSlip({ id: propId, inModal = false }) {
         lineHeight: 1.6,
       }}
     >
-      {/* Logo */}
+      {/* ซ่อนส่วนที่ไม่เกี่ยวข้องเวลาพิมพ์ออกเครื่องจริง */}
+      <style>{`
+        @media print {
+          @page { margin: 0; }
+          body { margin: 1cm; }
+        }
+      `}</style>
+
       <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
         <img src={LOGO_URL} alt="logo" style={{ width: 100, height: "auto" }} />
       </div>
 
-      {/* Header */}
       <div style={{ textAlign: "center", marginBottom: 8 }}>
         <h1 style={{ fontSize: 18, margin: 0 }}>{ORG}</h1>
         <div style={{ fontSize: 14 }}>{SITE}</div>
@@ -89,101 +104,34 @@ export default function PrintSlip({ id: propId, inModal = false }) {
 
       <div style={{ borderTop: "1px dashed #000", margin: "10px 0" }}></div>
 
-      {/* Visitor Info */}
       <div style={{ whiteSpace: "pre-line", marginBottom: 10 }}>
-        <div>
-          <b>ID:</b> {String(v.id).padStart(10, "0")}
-        </div>
-        <div>
-          <b>ชื่อ:</b> {v.full_name}
-        </div>
-        {v.gender && (
-          <div>
-            <b>เพศ:</b> {v.gender}
-          </div>
-        )}
-        {v.contact_person && (
-          <div>
-            <b>ติดต่อ:</b> {v.contact_person}
-          </div>
-        )}
-        {v.company && (
-          <div>
-            <b>บริษัท:</b> {v.company}
-          </div>
-        )}
-        {v.vehicle_plate && (
-          <div>
-            <b>ทะเบียนรถ:</b> {v.vehicle_plate}
-          </div>
-        )}
-        {v.purpose && (
-          <div>
-            <b>ประสงค์:</b> {translatePurpose(v.purpose, v.other_purpose)}
-          </div>
-        )}
-        <div>
-          <b>เวลาเข้า:</b> {formatDate(v.checkin_time)}
-        </div>
+        <div><b>ID:</b> {String(v.id).padStart(10, "0")}</div>
+        <div><b>ชื่อ:</b> {v.full_name}</div>
+        {v.gender && <div><b>เพศ:</b> {v.gender}</div>}
+        {v.contact_person && <div><b>ติดต่อ:</b> {v.contact_person}</div>}
+        {v.company && <div><b>บริษัท:</b> {v.company}</div>}
+        {v.vehicle_plate && <div><b>ทะเบียนรถ:</b> {v.vehicle_plate}</div>}
+        {v.purpose && <div><b>ประสงค์:</b> {translatePurpose(v.purpose, v.other_purpose)}</div>}
+        <div><b>เวลาเข้า:</b> {formatDate(v.checkin_time)}</div>
         <br />
+        <div><b>เวลาออก:</b> {formatDate(v.checkout_time) || "................................"}</div>
         <br />
-        <div>
-          <b>เวลาออก:</b> {formatDate(v.checkout_time) || "................................"}
-        </div>
-        <br />
-        <div>
-          <b style={{ fontSize: 12 }}>รปภ:</b> {"........................................."}
-        </div>
-
+        <div><b style={{ fontSize: 12 }}>รปภ:</b> {"........................................."}</div>
       </div>
 
       <div style={{ borderTop: "1px dashed #000", margin: "30px 0" }}></div>
 
-      {/* QR Code */}
       {v.qr_data && (
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
           <img src={v.qr_data} alt="qr" style={{ width: 120, height: 120 }} />
         </div>
       )}
 
-      {/* Photo */}
-      {/* {v.photo_url && (
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
-          <img
-            src={v.photo_url}
-            alt="photo"
-            style={{
-              width: 160,
-              height: 110,
-              objectFit: "cover",
-              border: "1px solid #ddd",
-            }}
-          />
-        </div>
-      )} */}
-
-      {/* Signature Box */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          marginBottom: 12,
-        }}
-      >
-        <div
-          style={{
-            width: 120,
-            height: 60,
-            border: "1px solid #000",
-            borderRadius: 4,
-            marginBottom: 4,
-          }}
-        ></div>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 12 }}>
+        <div style={{ width: 120, height: 60, border: "1px solid #000", borderRadius: 4, marginBottom: 4 }}></div>
         <div style={{ fontSize: 12, textAlign: "center" }}>(ลงชื่อผู้ได้รับการติดต่อ)</div>
       </div>
 
-      {/* Footer Note */}
       <div style={{ fontSize: 12, textAlign: "center" }}>
         (ตั๋วนี้ต้องนำไปให้เจ้าหน้าที่เมื่อเสร็จธุระ) <br />
         โปรดปฏิบัติตามนโยบายความปลอดภัยของหน่วยงาน

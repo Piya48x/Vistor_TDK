@@ -23,7 +23,7 @@ import { supabase } from "../supabaseClient";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { useNavigate } from "react-router-dom";
-import bgImage from '../img/g.jpg';
+import bgImage from "../img/g.jpg";
 
 const USERNAME = "1234";
 const PASSWORD = "1234";
@@ -58,7 +58,6 @@ function toLocalDatetimeInput(isoString) {
   );
 }
 
-
 const PURPOSE_TH = {
   meeting: "ประชุมงาน",
   delivery: "ส่งของ / รับของ", // 👈 ขาดตัวนี้
@@ -84,18 +83,19 @@ function normalizePurpose(purpose) {
   if (PURPOSE_TH[purpose]) return purpose;
 
   // ถ้าเป็นภาษาไทย → map กลับ
-  const found = Object.entries(PURPOSE_TH).find(
-    ([_, th]) => th === purpose
-  );
+  const found = Object.entries(PURPOSE_TH).find(([_, th]) => th === purpose);
 
   return found ? found[0] : "other";
 }
 const filterStyles = {
   TODAY: "bg-blue-600 border-blue-400 text-white shadow-lg shadow-blue-500/30",
-  STAYING: "bg-rose-600 border-rose-400 text-white shadow-lg shadow-rose-500/30",
-  CHECKOUT_TODAY: "bg-emerald-600 border-emerald-400 text-white shadow-lg shadow-emerald-500/30",
+  STAYING:
+    "bg-rose-600 border-rose-400 text-white shadow-lg shadow-rose-500/30",
+  CHECKOUT_TODAY:
+    "bg-emerald-600 border-emerald-400 text-white shadow-lg shadow-emerald-500/30",
   ALL: "bg-slate-800 border-slate-600 text-white shadow-lg shadow-slate-500/30",
-  CUSTOM: "bg-indigo-600 border-indigo-400 text-white shadow-lg shadow-indigo-500/30",
+  CUSTOM:
+    "bg-indigo-600 border-indigo-400 text-white shadow-lg shadow-indigo-500/30",
 };
 
 const PURPOSES = [
@@ -115,7 +115,6 @@ const PURPOSES = [
   { value: "emergency", label: "กรณีฉุกเฉิน" },
   { value: "other", label: "อื่น ๆ" },
 ];
-
 
 const translatePurpose = (purpose, other_purpose) => {
   if (purpose === "other") return other_purpose || "อื่น ๆ";
@@ -268,6 +267,7 @@ export default function Report() {
     }
   }, [navigate, loadVisitors]);
 
+  // ค้นหาส่วนนี้ในไฟล์ Report.jsx
   useEffect(() => {
     const channel = supabase
       .channel("realtime-visitors")
@@ -277,11 +277,13 @@ export default function Report() {
         (payload) => {
           loadSummary();
           loadVisitors(activeFilter);
+
+          // --- ส่วนที่ต้องมั่นใจว่ามี เพื่อให้หน้าสลิปเด้งขึ้นมาอัตโนมัติ ---
           if (payload.eventType === "INSERT") {
             const newId = payload.new.id;
             if (!printedIdsRef.current.has(newId)) {
               printedIdsRef.current.add(newId);
-              window.open(`/print/${newId}`, "_blank");
+              window.open(`/print/${newId}`, "_blank"); // ต้องอนุญาต Pop-up ในเบราว์เซอร์ด้วย
             }
           }
         }
@@ -308,22 +310,29 @@ export default function Report() {
   };
 
   const saveEdit = async () => {
-  const { error } = await supabase.from("visitors").update({
-    full_name: editForm.full_name,
-    company: editForm.company,
-    contact_person: editForm.contact_person,
-    purpose: editForm.purpose,        // ส่วนนี้รองรับอยู่แล้ว
-    other_purpose: editForm.other_purpose, // ส่วนนี้รองรับอยู่แล้ว
-    checkin_time: editForm.checkin_time ? new Date(editForm.checkin_time).toISOString() : null,
-    checkout_time: editForm.checkout_time ? new Date(editForm.checkout_time).toISOString() : null
-  }).eq("id", editingId);
+    const { error } = await supabase
+      .from("visitors")
+      .update({
+        full_name: editForm.full_name,
+        company: editForm.company,
+        contact_person: editForm.contact_person,
+        purpose: editForm.purpose, // ส่วนนี้รองรับอยู่แล้ว
+        other_purpose: editForm.other_purpose, // ส่วนนี้รองรับอยู่แล้ว
+        checkin_time: editForm.checkin_time
+          ? new Date(editForm.checkin_time).toISOString()
+          : null,
+        checkout_time: editForm.checkout_time
+          ? new Date(editForm.checkout_time).toISOString()
+          : null,
+      })
+      .eq("id", editingId);
 
-  if (!error) {
-    setEditingId(null);
-    loadSummary();
-    loadVisitors(activeFilter);
-  }
-};
+    if (!error) {
+      setEditingId(null);
+      loadSummary();
+      loadVisitors(activeFilter);
+    }
+  };
 
   const exportToExcel = async (ids) => {
     const rows = ids.length
@@ -514,12 +523,12 @@ export default function Report() {
   };
 
   return (
-   <div 
+    <div
       className="min-h-screen font-sans text-slate-900 pb-20 relative bg-cover bg-center bg-no-repeat bg-fixed"
-      style={{ 
+      style={{
         // 2. นำตัวแปร bgImage มาใส่ใน backgroundImage
         // และแนะนำให้ใส่ Overlay สีขาวจางๆ เพื่อให้ตัวหนังสืออ่านง่าย
-        backgroundImage: `linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 250, 0.7)), url(${bgImage})` 
+        backgroundImage: `linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 250, 0.7)), url(${bgImage})`,
       }}
     >
       {/* Loading Overlay */}
@@ -537,17 +546,17 @@ export default function Report() {
       {/* Navigation Bar */}
       <nav className="bg-white/10 backdrop-blur-xl border-b border-white/20 sticky top-0 z-50 px-6 lg:px-10 py-5 flex justify-between items-center shadow-lg">
         <div className="flex items-center gap-5">
-         <div className="relative group">
-  <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-xl shadow-indigo-500/20 border-2 border-white/30 transition-transform group-hover:scale-105">
-    <img 
-      src={bgImage} // หรือเปลี่ยนเป็นตัวแปรโลโก้ของคุณ เช่น import logo from '../img/logo.png'
-      alt="Company Logo"
-      className="w-full h-full object-cover"
-    />
-  </div>
-  {/* เพิ่มวงแหวนเรืองแสงรอบรูป */}
-  <div className="absolute inset-0 rounded-2xl bg-indigo-500/20 blur-lg -z-10 group-hover:bg-indigo-500/40 transition-all"></div>
-</div>
+          <div className="relative group">
+            <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-xl shadow-indigo-500/20 border-2 border-white/30 transition-transform group-hover:scale-105">
+              <img
+                src={bgImage} // หรือเปลี่ยนเป็นตัวแปรโลโก้ของคุณ เช่น import logo from '../img/logo.png'
+                alt="Company Logo"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            {/* เพิ่มวงแหวนเรืองแสงรอบรูป */}
+            <div className="absolute inset-0 rounded-2xl bg-indigo-500/20 blur-lg -z-10 group-hover:bg-indigo-500/40 transition-all"></div>
+          </div>
           <div>
             <h1 className="font-black text-xl lg:text-2xl text-slate-900 tracking-tight leading-none">
               {ORG}
@@ -732,27 +741,32 @@ export default function Report() {
 
         {/* Table Results Bar */}
         <div className="flex flex-col sm:flex-row justify-between items-center px-6 gap-4">
-         <div className={`
+          <div
+            className={`
   flex items-center gap-3 px-5 py-2.5 rounded-2xl border transition-all duration-300 ease-in-out
-  ${filterStyles[activeFilter] || "bg-indigo-50 border-indigo-100 text-indigo-700"} 
-`}>
-  {/* ตัว Icon ก็ปรับสีตามสถานะได้เช่นกัน */}
-  <Filter size={16} className="opacity-70" />
-  
-  <div className="flex flex-col">
-    <span className="text-[10px] uppercase tracking-wider opacity-60 font-bold">
-      กำลังแสดงผล :
-    </span>
-    <span className="text-sm font-black flex items-center gap-2">
-      {/* เพิ่มจุดไฟกะพริบ (Ping Animation) เป็นลูกเล่นเพิ่มความเท่ */}
-      <span className="relative flex h-2 w-2">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-75"></span>
-        <span className="relative inline-flex rounded-full h-2 w-2 bg-current"></span>
-      </span>
-      {getFilterStatusText(activeFilter)}
-    </span>
-  </div>
-</div>
+  ${
+    filterStyles[activeFilter] ||
+    "bg-indigo-50 border-indigo-100 text-indigo-700"
+  } 
+`}
+          >
+            {/* ตัว Icon ก็ปรับสีตามสถานะได้เช่นกัน */}
+            <Filter size={16} className="opacity-70" />
+
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-wider opacity-60 font-bold">
+                กำลังแสดงผล :
+              </span>
+              <span className="text-sm font-black flex items-center gap-2">
+                {/* เพิ่มจุดไฟกะพริบ (Ping Animation) เป็นลูกเล่นเพิ่มความเท่ */}
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-current"></span>
+                </span>
+                {getFilterStatusText(activeFilter)}
+              </span>
+            </div>
+          </div>
           <div className="text-slate-500 font-bold text-sm bg-white px-5 py-2.5 rounded-2xl shadow-sm border border-slate-100">
             พบทั้งหมด{" "}
             <span className="text-indigo-600 text-lg font-black mx-1">
@@ -892,18 +906,19 @@ export default function Report() {
                           </button>
                         )}
                         <button
-                         onClick={() => {
-  setEditingId(v.id);
-  setEditForm({
-    ...v,
-    purpose: normalizePurpose(v.purpose),
-    checkin_time: toLocalDatetimeInput(v.checkin_time),
-    checkout_time: v.checkout_time
-      ? toLocalDatetimeInput(v.checkout_time)
-      : "",
-  });
-}}
-
+                          onClick={() => {
+                            setEditingId(v.id);
+                            setEditForm({
+                              ...v,
+                              purpose: normalizePurpose(v.purpose),
+                              checkin_time: toLocalDatetimeInput(
+                                v.checkin_time
+                              ),
+                              checkout_time: v.checkout_time
+                                ? toLocalDatetimeInput(v.checkout_time)
+                                : "",
+                            });
+                          }}
                           className="p-3.5 bg-white border-2 border-slate-100 text-indigo-600 rounded-2xl hover:bg-indigo-50 transition-colors"
                         >
                           <Edit size={20} />
@@ -961,8 +976,7 @@ export default function Report() {
                 แก้ไขข้อมูล #{editingId}
               </h2>
               <button
-                 onClick={() => setEditingId(null)}
-
+                onClick={() => setEditingId(null)}
                 className="p-2 hover:bg-slate-100 rounded-full"
               >
                 <X />
@@ -1010,47 +1024,53 @@ export default function Report() {
               </div>
 
               <div className="space-y-4">
-  <div>
-    <label className="block text-sm font-bold text-slate-500 mb-2">วัตถุประสงค์ในการติดต่อ</label>
-  <select
-  className="w-full p-4 bg-slate-50 rounded-2xl border-2 border-transparent focus:border-indigo-500 outline-none"
-  value={editForm.purpose || ""}
-  onChange={(e) =>
-    setEditForm({
-      ...editForm,
-      purpose: e.target.value,
-      other_purpose: e.target.value === "other" ? editForm.other_purpose : "",
-    })
-  }
->
-  <option value="">เลือกวัตถุประสงค์</option>
-  {PURPOSES.map((item) => (
-    <option key={item.value} value={item.value}>
-      {item.label}
-    </option>
-  ))}
-</select>
+                <div>
+                  <label className="block text-sm font-bold text-slate-500 mb-2">
+                    วัตถุประสงค์ในการติดต่อ
+                  </label>
+                  <select
+                    className="w-full p-4 bg-slate-50 rounded-2xl border-2 border-transparent focus:border-indigo-500 outline-none"
+                    value={editForm.purpose || ""}
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        purpose: e.target.value,
+                        other_purpose:
+                          e.target.value === "other"
+                            ? editForm.other_purpose
+                            : "",
+                      })
+                    }
+                  >
+                    <option value="">เลือกวัตถุประสงค์</option>
+                    {PURPOSES.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-  </div>
-
-  {/* แสดงช่องนี้เฉพาะเมื่อเลือก "อื่น ๆ" หรือค่าที่ไม่ตรงกับใน List มาตรฐาน */}
- {editForm.purpose === "other" && (
-  <div className="animate-in slide-in-from-top-2">
-    <label className="block text-sm font-bold text-slate-500 mb-2">
-      ระบุวัตถุประสงค์อื่น ๆ
-    </label>
-    <input
-      type="text"
-      className="w-full p-4 bg-slate-50 rounded-2xl border-2 border-transparent focus:border-indigo-500 outline-none"
-      value={editForm.other_purpose || ""}
-      onChange={(e) =>
-        setEditForm({ ...editForm, other_purpose: e.target.value })
-      }
-    />
-  </div>
-)}
-
-</div>
+                {/* แสดงช่องนี้เฉพาะเมื่อเลือก "อื่น ๆ" หรือค่าที่ไม่ตรงกับใน List มาตรฐาน */}
+                {editForm.purpose === "other" && (
+                  <div className="animate-in slide-in-from-top-2">
+                    <label className="block text-sm font-bold text-slate-500 mb-2">
+                      ระบุวัตถุประสงค์อื่น ๆ
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full p-4 bg-slate-50 rounded-2xl border-2 border-transparent focus:border-indigo-500 outline-none"
+                      value={editForm.other_purpose || ""}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          other_purpose: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                )}
+              </div>
               {/* เพิ่มต่อจากช่อง บุคคลที่มาติดต่อ ใน Modal */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>

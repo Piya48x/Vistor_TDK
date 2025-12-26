@@ -16,7 +16,7 @@ export default function App() {
     company: "",
     phone: "",
     contact_person: "",
-    purpose: "", 
+    purpose: "",
     other_purpose: "",
   });
 
@@ -83,7 +83,7 @@ export default function App() {
                 ? `อื่น ๆ: ${form.other_purpose}`
                 : form.purpose,
             checkin_time: new Date().toISOString(),
-          }
+          },
         ])
         .select()
         .single();
@@ -105,7 +105,9 @@ export default function App() {
       }
 
       // --- ส่วนการจำประวัติชื่อและข้อมูลเดิม ---
-      const history = JSON.parse(localStorage.getItem("visitor_history") || "[]");
+      const history = JSON.parse(
+        localStorage.getItem("visitor_history") || "[]"
+      );
       const newItem = {
         full_name: form.full_name,
         company: form.company,
@@ -153,7 +155,7 @@ export default function App() {
   const handleNameChange = (e) => {
     const name = e.target.value;
     // อัปเดตชื่อในฟอร์มก่อน
-    setForm(prev => ({ ...prev, full_name: name }));
+    setForm((prev) => ({ ...prev, full_name: name }));
 
     // ค้นหาในประวัติว่าเคยมีชื่อนี้ไหม
     const found = historyList.find((h) => h.full_name === name);
@@ -216,10 +218,19 @@ export default function App() {
 
           {step === 1 && (
             <div className="fade">
-              <h2 style={{ textAlign: "center", marginTop: 0, fontSize: "20px" }}>
+              <h2
+                style={{ textAlign: "center", marginTop: 0, fontSize: "20px" }}
+              >
                 ถ่ายรูปบัตร หรือ นามบัตร
               </h2>
-              <p style={{ textAlign: "center", color: "#718096", fontSize: "14px", marginBottom: 20 }}>
+              <p
+                style={{
+                  textAlign: "center",
+                  color: "#718096",
+                  fontSize: "14px",
+                  marginBottom: 20,
+                }}
+              >
                 กรุณาวางบัตรประชาชน หรือเอกสารสำคัญให้เห็นชัดเจนในกรอบ
               </p>
 
@@ -243,10 +254,16 @@ export default function App() {
                   </button>
                 ) : (
                   <>
-                    <button className="btn-action btn-tdk" onClick={() => setStep(2)}>
+                    <button
+                      className="btn-action btn-tdk"
+                      onClick={() => setStep(2)}
+                    >
                       ใช้รูปนี้และกรอกข้อมูล ➔
                     </button>
-                    <button className="btn-action btn-ghost" onClick={() => setCameraActive(true)}>
+                    <button
+                      className="btn-action btn-ghost"
+                      onClick={() => setCameraActive(true)}
+                    >
                       ถ่ายภาพใหม่อีกครั้ง
                     </button>
                   </>
@@ -257,7 +274,9 @@ export default function App() {
 
           {step === 2 && (
             <form onSubmit={handleSubmit} className="fade">
-              <h2 style={{ textAlign: "center", marginTop: 0, fontSize: "20px" }}>
+              <h2
+                style={{ textAlign: "center", marginTop: 0, fontSize: "20px" }}
+              >
                 ข้อมูลผู้มาติดต่อ
               </h2>
 
@@ -284,7 +303,9 @@ export default function App() {
                   required
                   placeholder="ชื่อบริษัทของคุณ"
                   value={form.company}
-                  onChange={(e) => setForm({ ...form, company: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, company: e.target.value })
+                  }
                 />
               </div>
 
@@ -305,7 +326,9 @@ export default function App() {
                   required
                   placeholder="ชื่อเจ้าหน้าที่ TDK"
                   value={form.contact_person}
-                  onChange={(e) => setForm({ ...form, contact_person: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, contact_person: e.target.value })
+                  }
                 />
               </div>
 
@@ -315,16 +338,46 @@ export default function App() {
                   required
                   value={form.purpose}
                   onChange={(e) => handleInputChange("purpose", e.target.value)}
+                  // ใช้ Inline Style หรือ Class เพื่อเปลี่ยนสีตามเงื่อนไข
+                  style={{ color: form.purpose === "" ? "#9ca3af" : "#111827" }}
+                  className="w-full p-4 bg-white rounded-2xl border-2 border-slate-200 outline-none"
                 >
-                  <option value="" disabled>-- กรุณาเลือก --</option>
-                  <option value="ประชุมงาน">ประชุมงาน (Meeting)</option>
-                  <option value="ส่งสินค้า/รับสินค้า">ส่งสินค้า / รับสินค้า (Delivery)</option>
-                  <option value="ซ่อมบำรุง/ติดตั้ง">ซ่อมบำรุง / ติดตั้ง (Maintenance)</option>
-                  <option value="อบรม/สอนงาน">อบรม / สอนงาน (Training)</option>
-                  <option value="ตรวจสอบ/Audit">ตรวจสอบ / Audit</option>
-                  <option value="สมัครงาน/สัมภาษณ์">สมัครงาน / สัมภาษณ์ (Interview)</option>
-                  <option value="วางบิล/รับเช็ค">วางบิล / รับเช็ค (Billing)</option>
-                  <option value="อื่น ๆ">อื่น ๆ (Other)</option>
+                  <option value="" disabled hidden>
+                    -- กรุณาเลือก --
+                  </option>
+                  <option value="ประชุมงาน" style={{ color: "#111827" }}>
+                    ประชุมงาน (Meeting)
+                  </option>
+                  <option
+                    value="ส่งสินค้า/รับสินค้า"
+                    style={{ color: "#111827" }}
+                  >
+                    ส่งสินค้า / รับสินค้า (Delivery)
+                  </option>
+                  <option
+                    value="ซ่อมบำรุง/ติดตั้ง"
+                    style={{ color: "#111827" }}
+                  >
+                    ซ่อมบำรุง / ติดตั้ง (Maintenance)
+                  </option>
+                  <option value="อบรม/สอนงาน" style={{ color: "#111827" }}>
+                    อบรม / สอนงาน (Training)
+                  </option>
+                  <option value="ตรวจสอบ/Audit" style={{ color: "#111827" }}>
+                    ตรวจสอบ / Audit
+                  </option>
+                  <option
+                    value="สมัครงาน/สัมภาษณ์"
+                    style={{ color: "#111827" }}
+                  >
+                    สมัครงาน / สัมภาษณ์ (Interview)
+                  </option>
+                  <option value="วางบิล/รับเช็ค" style={{ color: "#111827" }}>
+                    วางบิล / รับเช็ค (Billing)
+                  </option>
+                  <option value="อื่น ๆ" style={{ color: "#111827" }}>
+                    อื่น ๆ (Other)
+                  </option>
                 </select>
               </div>
 
@@ -335,15 +388,26 @@ export default function App() {
                     required
                     placeholder="ระบุเหตุผลการเข้าพบ"
                     value={form.other_purpose}
-                    onChange={(e) => setForm({ ...form, other_purpose: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, other_purpose: e.target.value })
+                    }
                   />
                 </div>
               )}
 
-              <button type="submit" disabled={loading} className="btn-action btn-tdk" style={{ marginTop: 10 }}>
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-action btn-tdk"
+                style={{ marginTop: 10 }}
+              >
                 {loading ? "กำลังบันทึก..." : "ยืนยันการลงทะเบียน"}
               </button>
-              <button type="button" className="btn-action btn-ghost" onClick={handleEditPhoto}>
+              <button
+                type="button"
+                className="btn-action btn-ghost"
+                onClick={handleEditPhoto}
+              >
                 แก้ไขรูปภาพ / ย้อนกลับ
               </button>
             </form>
@@ -352,12 +416,19 @@ export default function App() {
           {step === 3 && (
             <div className="success-hero fade">
               <div className="check-circle">✓</div>
-              <h2 style={{ color: "var(--tdk-blue)", marginBottom: 10 }}>ลงทะเบียนสำเร็จ!</h2>
+              <h2 style={{ color: "var(--tdk-blue)", marginBottom: 10 }}>
+                ลงทะเบียนสำเร็จ!
+              </h2>
               <p style={{ color: "#718096", lineHeight: 1.6 }}>
-                บันทึกข้อมูลเข้าพื้นที่เรียบร้อยแล้ว<br />
+                บันทึกข้อมูลเข้าพื้นที่เรียบร้อยแล้ว
+                <br />
                 กรุณารอรับบัตร Visitor จากเจ้าหน้าที่
               </p>
-              <button className="btn-action btn-tdk" style={{ marginTop: 40 }} onClick={resetForm}>
+              <button
+                className="btn-action btn-tdk"
+                style={{ marginTop: 40 }}
+                onClick={resetForm}
+              >
                 เสร็จสิ้น
               </button>
             </div>
@@ -365,7 +436,14 @@ export default function App() {
         </div>
       </div>
 
-      <div style={{ marginTop: 40, textAlign: "center", opacity: 0.3, fontSize: "12px" }}>
+      <div
+        style={{
+          marginTop: 40,
+          textAlign: "center",
+          opacity: 0.3,
+          fontSize: "12px",
+        }}
+      >
         SECURITY MANAGEMENT SYSTEM BY TDK INDUSTRIAL
       </div>
     </div>
