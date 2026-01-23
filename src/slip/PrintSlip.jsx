@@ -13,6 +13,7 @@ export default function PrintSlip({ id: propId, inModal = false }) {
   const printedRef = useRef(false)
 
 // แก้ไขส่วน useEffect ในไฟล์ PrintSlip.jsx
+// แก้ไขส่วน useEffect ในไฟล์ PrintSlip.jsx
 useEffect(() => {
   if (!id) return;
 
@@ -116,7 +117,11 @@ useEffect(() => {
         <br />
         <div><b>เวลาออก:</b> {formatDate(v.checkout_time) || "................................"}</div>
         <br />
+        <div><b style={{ fontSize: 10 }}>Card Number:</b> {"..........................."}</div>
+          <br />
         <div><b style={{ fontSize: 12 }}>รปภ:</b> {"........................................."}</div>
+      
+        
       </div>
 
       <div style={{ borderTop: "1px dashed #000", margin: "30px 0" }}></div>

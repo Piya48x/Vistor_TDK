@@ -217,24 +217,15 @@ export default function App() {
           </div>
 
           {step === 1 && (
-            <div className="fade">
-              <h2
+            
+            <div className="fade">   <h2
                 style={{ textAlign: "center", marginTop: 0, fontSize: "20px" }}
               >
                 ถ่ายรูปบัตร หรือ นามบัตร
               </h2>
-              <p
-                style={{
-                  textAlign: "center",
-                  color: "#718096",
-                  fontSize: "14px",
-                  marginBottom: 20,
-                }}
-              >
-                กรุณาวางบัตรประชาชน หรือเอกสารสำคัญให้เห็นชัดเจนในกรอบ
-              </p>
-
-              <div className="camera-container">
+              <br />
+                <div className="camera-container">
+                  
                 {cameraActive ? (
                   <>
                     <video ref={videoRef} autoPlay playsInline muted />
@@ -246,6 +237,21 @@ export default function App() {
                   <img src={photoDataUrl} className="snapshot" alt="Captured" />
                 )}
               </div>
+              <br />
+           
+              
+              <p
+                style={{
+                  textAlign: "center",
+                  color: "#718096",
+                  fontSize: "14px",
+                  marginBottom: 20,
+                }}
+              >
+                กรุณาวางบัตรประชาชน หรือเอกสารสำคัญให้เห็นชัดเจนในกรอบ
+              </p>
+
+            
 
               <div style={{ marginTop: 30 }}>
                 {cameraActive ? (

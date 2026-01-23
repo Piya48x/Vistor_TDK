@@ -17,6 +17,8 @@ import {
   Briefcase,
   ChevronRight,
   X,
+  Camera,
+  Maximize2
 } from "lucide-react";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "../supabaseClient";
@@ -24,6 +26,7 @@ import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { useNavigate } from "react-router-dom";
 import bgImage from "../img/g.jpg";
+import { Sun, Moon } from 'lucide-react';
 
 const USERNAME = "1234";
 const PASSWORD = "1234";
@@ -157,6 +160,12 @@ export default function Report() {
   });
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const toggleTheme = () => {
+    setIsDarkMode(!isDarkMode);
+  };
 
   const getFilterStatusText = () => {
     switch (activeFilter) {
@@ -222,6 +231,39 @@ export default function Report() {
     [activeFilter, searchStart, searchEnd, searchName]
   );
 
+  const handleViewImage = (imgSrc) => {
+    MySwal.fire({
+      imageUrl: imgSrc,
+      imageAlt: 'Company Logo',
+      showConfirmButton: false,
+      showCloseButton: true,
+      background: isDarkMode ? '#1e293b' : '#fff',
+      customClass: {
+        image: 'rounded-3xl shadow-2xl'
+      }
+    });
+  };
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setIsUploading(true);
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64String = reader.result;
+        
+        // ตรงนี้คุณสามารถเพิ่ม Logic การบันทึก URL ลงฐานข้อมูล Supabase ได้
+        // ตัวอย่าง: await supabase.from('settings').update({ logo: base64String }).eq('id', 1);
+        
+        Toast.fire({
+          icon: 'success',
+          title: 'อัปเดตรูปภาพเรียบร้อยแล้ว'
+        });
+        setIsUploading(false);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const loadSummary = async () => {
     const now = new Date();
     const tStart = new Date(now.setHours(0, 0, 0, 0)).toISOString();
@@ -279,6 +321,7 @@ export default function Report() {
           loadVisitors(activeFilter);
 
           // --- ส่วนที่ต้องมั่นใจว่ามี เพื่อให้หน้าสลิปเด้งขึ้นมาอัตโนมัติ ---
+          // ใน Report.jsx
           if (payload.eventType === "INSERT") {
             const newId = payload.new.id;
             if (!printedIdsRef.current.has(newId)) {
@@ -523,14 +566,38 @@ export default function Report() {
   };
 
   return (
-    <div
-      className="min-h-screen font-sans text-slate-900 pb-20 relative bg-cover bg-center bg-no-repeat bg-fixed"
+   <div
+      className={`min-h-screen font-sans pb-20 relative bg-cover bg-center bg-no-repeat bg-fixed transition-colors duration-300
+        ${isDarkMode ? 'text-slate-900' : 'text-slate-900'} 
+      `}
       style={{
-        // 2. นำตัวแปร bgImage มาใส่ใน backgroundImage
-        // และแนะนำให้ใส่ Overlay สีขาวจางๆ เพื่อให้ตัวหนังสืออ่านง่าย
-        backgroundImage: `linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 250, 0.7)), url(${bgImage})`,
+        // 3. กำหนด Logic สีพื้นหลัง
+        // Light Mode: ใช้เขียวเดิมของคุณ หรือลองใช้ #070618 (เขียวอ่อนสบายตา)
+        // Dark Mode: ใช้ #0f172a (Slate 900 - น้ำเงินเทาเข้ม)
+        backgroundColor: isDarkMode ? "#6e7e88" : "#d3e0e2",
+        
+        // ถ้ามีรูปภาพ BG:
+        // backgroundImage: isDarkMode 
+        //   ? `linear-gradient(rgba(57, 95, 184, 0.9), rgba(15, 23, 42, 0.9)), url(${bgImage})` // Dark Overlay
+        //   : `linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 250, 0.7)), url(${bgImage})` // Light Overlay
       }}
     >
+      <div className="absolute top-4 right-4 z-50">
+        <button
+          onClick={toggleTheme}
+          className={`
+            p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110
+            ${isDarkMode 
+              ? 'bg-slate-800 text-yellow-400 hover:bg-slate-700' // Style ตอนมืด
+              : 'bg-white text-indigo-600 hover:bg-indigo-50'      // Style ตอนสว่าง
+            }
+          `}
+          title={isDarkMode ? "เปลี่ยนเป็นโหมดสว่าง" : "เปลี่ยนเป็นโหมดมืด"}
+        >
+          {isDarkMode ? <Sun size={24} /> : <Moon size={24} />}
+        </button>
+      </div>
+    
       {/* Loading Overlay */}
       {isLoading && (
         <div className="fixed inset-0 z-[100] bg-white/60 backdrop-blur-[2px] flex flex-col items-center justify-center transition-all animate-in fade-in duration-300">
@@ -544,60 +611,81 @@ export default function Report() {
       )}
 
       {/* Navigation Bar */}
-      <nav className="bg-white/10 backdrop-blur-xl border-b border-white/20 sticky top-0 z-50 px-6 lg:px-10 py-5 flex justify-between items-center shadow-lg">
-        <div className="flex items-center gap-5">
-          <div className="relative group">
-            <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-xl shadow-indigo-500/20 border-2 border-white/30 transition-transform group-hover:scale-105">
-              <img
-                src={bgImage} // หรือเปลี่ยนเป็นตัวแปรโลโก้ของคุณ เช่น import logo from '../img/logo.png'
-                alt="Company Logo"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            {/* เพิ่มวงแหวนเรืองแสงรอบรูป */}
-            <div className="absolute inset-0 rounded-2xl bg-indigo-500/20 blur-lg -z-10 group-hover:bg-indigo-500/40 transition-all"></div>
+  <nav className="bg-white/10 dark:bg-slate-900/40 backdrop-blur-xl border-b border-white/20 dark:border-white/10 sticky top-0 z-50 px-6 lg:px-10 py-5 flex justify-between items-center shadow-lg transition-colors duration-300">
+      
+      {/* ฝั่งซ้าย: Logo & Title */}
+      <div className="flex items-center gap-5">
+        <div className="relative group">
+          <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-xl shadow-indigo-500/20 border-2 border-white/30 transition-transform group-hover:scale-105">
+            <img
+              src={bgImage}
+              alt="Company Logo"
+              className="w-full h-full object-cover"
+            />
           </div>
-          <div>
-            <h1 className="font-black text-xl lg:text-2xl text-slate-900 tracking-tight leading-none">
-              {ORG}
-            </h1>
-            <p className="text-[10px] lg:text-[11px] text-slate-800 font-bold uppercase tracking-[0.3em] mt-1">
-              Report Dashboard
-            </p>
-          </div>
+          <div className="absolute inset-0 rounded-2xl bg-indigo-500/20 blur-lg -z-10 group-hover:bg-indigo-500/40 transition-all"></div>
         </div>
-        <div className="flex gap-2 lg:gap-3">
-          {selectedIds.length > 0 && (
-            <button
-              onClick={deleteSelected}
-              className="flex items-center gap-2 px-4 lg:px-6 py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-rose-100 active:scale-95 animate-in slide-in-from-right-4"
-            >
-              <Trash2 size={18} />{" "}
-              <span className="hidden lg:inline">ลบที่เลือก</span> (
-              {selectedIds.length})
-            </button>
-          )}
-          <button
-            onClick={() => exportToExcel(selectedIds)}
-            disabled={selectedIds.length === 0}
-            className={`flex items-center gap-2 px-4 lg:px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-lg active:scale-95 ${
-              selectedIds.length > 0
-                ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-100"
-                : "bg-slate-200 text-slate-400 cursor-not-allowed"
-            }`}
-          >
-            <Download size={18} />{" "}
-            <span className="hidden lg:inline">Export Excel</span> (
-            {selectedIds.length})
-          </button>
-          <button
-            onClick={() => navigate("/")}
-            className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl transition-all active:scale-90"
-          >
-            <Home size={22} />
-          </button>
+        <div>
+          <h1 className="font-black text-xl lg:text-2xl text-slate-900 dark:text-white tracking-tight leading-none">
+            {ORG}
+          </h1>
+          <p className="text-[10px] lg:text-[11px] text-slate-800 dark:text-slate-300 font-bold uppercase tracking-[0.3em] mt-1">
+            Report Dashboard
+          </p>
         </div>
-      </nav>
+      </div>
+
+      {/* ฝั่งขวา: Buttons Action */}
+      <div className="flex gap-2 lg:gap-3 items-center">
+        
+        {/* 1. ปุ่มลบ (แสดงเมื่อมีการเลือก) */}
+        {selectedIds.length > 0 && (
+          <button
+            onClick={deleteSelected}
+            className="flex items-center gap-2 px-4 lg:px-6 py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-rose-100 active:scale-95 animate-in slide-in-from-right-4"
+          >
+            <Trash2 size={18} />
+            <span className="hidden lg:inline">ลบที่เลือก</span> ({selectedIds.length})
+          </button>
+        )}
+
+        {/* 2. ปุ่ม Export */}
+        <button
+          onClick={() => exportToExcel(selectedIds)}
+          disabled={selectedIds.length === 0}
+          className={`flex items-center gap-2 px-4 lg:px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-lg active:scale-95 ${
+            selectedIds.length > 0
+              ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-100/50"
+              : "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed border border-white/10"
+          }`}
+        >
+          <Download size={18} />
+          <span className="hidden lg:inline">Export Excel</span> ({selectedIds.length})
+        </button>
+
+        {/* --- 3. ปุ่มเปลี่ยนธีม (แทรกตรงนี้) --- */}
+        <button
+          onClick={() => setIsDarkMode(!isDarkMode)}
+          className={`p-3 rounded-2xl transition-all active:scale-90 shadow-md flex items-center justify-center ${
+            isDarkMode 
+              ? "bg-slate-800 text-yellow-400 hover:bg-slate-700 border border-white/10" 
+              : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200"
+          }`}
+          title={isDarkMode ? "Light Mode" : "Dark Mode"}
+        >
+          {isDarkMode ? <Sun size={22} /> : <Moon size={22} />}
+        </button>
+
+        {/* 4. ปุ่ม Home */}
+        <button
+          onClick={() => navigate("/")}
+          className="p-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-2xl transition-all active:scale-90 border border-white/10 shadow-md"
+        >
+          <Home size={22} />
+        </button>
+        
+      </div>
+    </nav>
 
       <div className="max-w-[1600px] mx-auto p-6 lg:p-10 space-y-8">
         {/* Stats Grid */}
