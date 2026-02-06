@@ -457,3 +457,17 @@
       margin: 0;
     }
   }
+
+  .goog-logo-link {
+  display: none !important;
+}
+
+.goog-te-gadget {
+  font-size: 0px !important;
+}
+
+.goog-te-gadget select {
+  border-radius: 20px;
+  padding: 5px 10px;
+  font-size: 14px;
+}
