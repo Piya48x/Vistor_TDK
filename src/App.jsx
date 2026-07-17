@@ -443,7 +443,7 @@ export default function App() {
   const t = translations[language];
   const [isLangOpen, setIsLangOpen] = useState(false);
   const userAgent = typeof navigator === "undefined" ? "" : navigator.userAgent;
-  const isLineBrowser = /Line\//i.test(userAgent);
+  const isLineBrowser = /Line\//i.test(userAgent) || /\bLIFF\b/i.test(userAgent);
   const prefersNativeCamera = isLineBrowser || /Android|iPhone|iPad|iPod/i.test(userAgent);
 
   
@@ -474,6 +474,7 @@ export default function App() {
   const analysisCanvasRef = useRef(null);
   const cardReadySinceRef = useRef(null);
   const captureLockedRef = useRef(false);
+  const lineAutoCameraAttemptedRef = useRef(false);
 
   const handleLanguageChange = (lang) => {
   setLanguage(lang);
@@ -517,11 +518,6 @@ useEffect(() => {
   }, [step]);
 
   const startCamera = async () => {
-    if (prefersNativeCamera) {
-      openNativeCamera();
-      return;
-    }
-
     resetCardDetection();
     setPhotoDataUrl("");
     setCameraError("");
@@ -617,32 +613,50 @@ useEffect(() => {
     const input = fileInputRef.current;
     if (!input) return;
 
-    try {
-      if (typeof input.showPicker === "function") {
-        input.showPicker();
-        return;
-      }
-    } catch {
-      // Some in-app browsers expose showPicker but still block it.
-    }
-
+    // Reset the value so Android can return the same photo twice. A direct
+    // click also preserves the user gesture better inside LINE's WebView.
+    input.value = "";
     input.click();
   };
 
   const openInChrome = () => {
     const currentUrl = window.location.href;
-    const withoutProtocol = currentUrl.replace(/^https?:\/\//, "");
-    const scheme = window.location.protocol.replace(":", "") || "https";
+    const currentLocation = new URL(currentUrl);
+    const scheme = currentLocation.protocol.replace(":", "") || "https";
 
     if (/Android/i.test(userAgent)) {
-      window.location.href = `intent://${withoutProtocol}#Intent;scheme=${scheme};package=com.android.chrome;end`;
+      const hash = currentLocation.hash
+        ? `%23${currentLocation.hash.slice(1)}`
+        : "";
+      const chromeTarget = `${currentLocation.host}${currentLocation.pathname}${currentLocation.search}${hash}`;
+      const fallbackUrl = encodeURIComponent(currentUrl);
+      window.location.href = `intent://${chromeTarget}#Intent;scheme=${scheme};package=com.android.chrome;S.browser_fallback_url=${fallbackUrl};end`;
       return;
     }
 
-    window.location.href = currentUrl
-      .replace(/^https:\/\//, "googlechromes://")
-      .replace(/^http:\/\//, "googlechrome://");
+    if (/iPhone|iPad|iPod/i.test(userAgent)) {
+      window.location.href = currentUrl
+        .replace(/^https:\/\//, "googlechromes://")
+        .replace(/^http:\/\//, "googlechrome://");
+      return;
+    }
+
+    window.open(currentUrl, "_blank", "noopener,noreferrer");
   };
+
+  useEffect(() => {
+    if (step !== 1 || !isLineBrowser || photoDataUrl) return undefined;
+
+    // LINE can show the native permission prompt from getUserMedia as soon as
+    // the scanned page opens. The guard prevents repeated prompts on rerender.
+    const timer = window.setTimeout(() => {
+      if (lineAutoCameraAttemptedRef.current) return;
+      lineAutoCameraAttemptedRef.current = true;
+      startCamera();
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [step, isLineBrowser]);
 
   const startAutoCapture = (remainingMs) => {
     clearAutoCapture();
@@ -1573,48 +1587,30 @@ useEffect(() => {
                     {cameraStatus === "ready" ? t.takePhoto : t.cameraStarting}
                   </button>
                 ) : (
-                  prefersNativeCamera ? (
-                    <>
-                      <button
-                        className="btn-action btn-tdk"
-                        onClick={openNativeCamera}
-                      >
-                        {t.cameraFallback}
-                      </button>
-                      {(isLineBrowser || cameraError) && (
-                        <button
-                          className="btn-action btn-ghost"
-                          onClick={openInChrome}
-                        >
-                          {t.openChrome}
-                        </button>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        className="btn-action btn-tdk"
-                        onClick={startCamera}
-                        disabled={cameraStatus === "starting"}
-                      >
-                        {cameraStatus === "starting" ? t.cameraStarting : t.openCamera}
-                      </button>
-                      <button
-                        className="btn-action btn-secondary"
-                        onClick={openNativeCamera}
-                      >
-                        {t.cameraFallback}
-                      </button>
-                      {cameraError && (
-                        <button
-                          className="btn-action btn-ghost"
-                          onClick={openInChrome}
-                        >
-                          {t.openChrome}
-                        </button>
-                      )}
-                    </>
-                  )
+                  <>
+                    <button
+                      type="button"
+                      className="btn-action btn-tdk"
+                      onClick={startCamera}
+                      disabled={cameraStatus === "starting"}
+                    >
+                      {cameraStatus === "starting" ? t.cameraStarting : t.openCamera}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-action btn-secondary"
+                      onClick={openNativeCamera}
+                    >
+                      {t.cameraFallback}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-action btn-ghost"
+                      onClick={openInChrome}
+                    >
+                      {t.openChrome}
+                    </button>
+                  </>
                 )}
               </div>
             </div>
