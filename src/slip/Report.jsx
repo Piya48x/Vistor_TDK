@@ -18,7 +18,18 @@ import {
   ChevronRight,
   X,
   Camera,
-  Maximize2
+  Maximize2,
+  Activity,
+  AlertTriangle,
+  BarChart3,
+  ClipboardList,
+  LogOut,
+  RefreshCw,
+  ShieldCheck,
+  Sun,
+  Moon,
+  TrendingUp,
+  UserCheck
 } from "lucide-react";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "../supabaseClient";
@@ -26,7 +37,6 @@ import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import { useNavigate } from "react-router-dom";
 import bgImage from "../img/g.jpg";
-import { Sun, Moon } from 'lucide-react';
 
 const USERNAME = "1234";
 const PASSWORD = "1234";
@@ -144,6 +154,13 @@ function calculateDuration(checkin, checkout) {
   return `${Math.floor(diffMins / 60)} ชม. ${diffMins % 60} นาที`;
 }
 
+function calculateDurationMinutes(checkin, checkout) {
+  if (!checkin) return 0;
+  const start = new Date(checkin);
+  const end = checkout ? new Date(checkout) : new Date();
+  return Math.max(0, Math.floor((end - start) / 60000));
+}
+
 export default function Report() {
   const [visitors, setVisitors] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -221,7 +238,12 @@ export default function Report() {
       else if (filterType === "CUSTOM") {
         if (searchStart) q = q.gte("checkin_time", `${searchStart}T00:00:00`);
         if (searchEnd) q = q.lte("checkin_time", `${searchEnd}T23:59:59`);
-        if (searchName) q = q.ilike("full_name", `%${searchName}%`);
+        if (searchName) {
+          const keyword = searchName.replaceAll(",", " ").trim();
+          q = q.or(
+            `full_name.ilike.%${keyword}%,company.ilike.%${keyword}%,contact_person.ilike.%${keyword}%,phone.ilike.%${keyword}%`
+          );
+        }
       }
 
       const { data, error } = await q;
@@ -340,6 +362,7 @@ export default function Report() {
       .from("visitors")
       .update({ checkout_time: new Date().toISOString() })
       .eq("id", id);
+    loadSummary();
     loadVisitors(activeFilter);
   };
 
@@ -565,39 +588,102 @@ export default function Report() {
     saveAs(new Blob([buf]), `Visitor_Report_${ORG}_${dateStr}.xlsx`);
   };
 
+  const openEdit = (v) => {
+    setEditingId(v.id);
+    setEditForm({
+      ...v,
+      purpose: normalizePurpose(v.purpose),
+      checkin_time: toLocalDatetimeInput(v.checkin_time),
+      checkout_time: v.checkout_time ? toLocalDatetimeInput(v.checkout_time) : "",
+    });
+  };
+
+  const currentVisitors = visitors.filter((v) => !v.checkout_time);
+  const completedVisitors = visitors.filter((v) => v.checkout_time);
+  const priorityCheckoutList = [...currentVisitors]
+    .sort(
+      (a, b) =>
+        calculateDurationMinutes(b.checkin_time) -
+        calculateDurationMinutes(a.checkin_time)
+    )
+    .slice(0, 6);
+  const checkoutRate =
+    summary.today > 0
+      ? Math.min(100, Math.round((summary.outToday / summary.today) * 100))
+      : 0;
+  const activeRate =
+    summary.today > 0
+      ? Math.min(100, Math.round((summary.staying / summary.today) * 100))
+      : 0;
+  const purposeCounts = visitors.reduce((acc, visitor) => {
+    const label = translatePurpose(visitor.purpose, visitor.other_purpose) || "ไม่ระบุ";
+    acc[label] = (acc[label] || 0) + 1;
+    return acc;
+  }, {});
+  const purposeBreakdown = Object.entries(purposeCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+  const maxPurposeCount = Math.max(...purposeBreakdown.map(([, count]) => count), 1);
+  const hourlyBuckets = Array.from({ length: 24 }, (_, hour) => ({
+    hour,
+    count: visitors.filter((v) => new Date(v.checkin_time).getHours() === hour)
+      .length,
+  }));
+  const maxHourlyCount = Math.max(...hourlyBuckets.map((item) => item.count), 1);
+  const visibleHourlyBuckets = hourlyBuckets.filter(
+    (item) => item.count > 0 || [8, 10, 12, 14, 16, 18].includes(item.hour)
+  );
+  const summaryCards = [
+    {
+      id: "TODAY",
+      label: "ผู้มาติดต่อวันนี้",
+      value: summary.today,
+      hint: "Check-in ทั้งหมด",
+      icon: Users,
+      accent: "text-blue-600 bg-blue-50 border-blue-100",
+    },
+    {
+      id: "STAYING",
+      label: "ยังอยู่ในพื้นที่",
+      value: summary.staying,
+      hint: "ต้องติดตามเช็คเอ้าท์",
+      icon: ShieldCheck,
+      accent: "text-rose-600 bg-rose-50 border-rose-100",
+      live: summary.staying > 0,
+    },
+    {
+      id: "CHECKOUT_TODAY",
+      label: "เช็คเอ้าท์วันนี้",
+      value: summary.outToday,
+      hint: `${checkoutRate}% ของวันนี้`,
+      icon: LogOut,
+      accent: "text-emerald-600 bg-emerald-50 border-emerald-100",
+    },
+    {
+      id: "ALL",
+      label: "ข้อมูลทั้งหมด",
+      value: summary.all,
+      hint: "สะสมในระบบ",
+      icon: ClipboardList,
+      accent: "text-violet-600 bg-violet-50 border-violet-100",
+    },
+  ];
+  const quickFilters = [
+    { id: "TODAY", label: "วันนี้", icon: Calendar },
+    { id: "STAYING", label: "ยังอยู่", icon: Activity },
+    { id: "CHECKOUT_TODAY", label: "ออกวันนี้", icon: CheckCircle },
+    { id: "ALL", label: "ทั้งหมด", icon: ClipboardList },
+  ];
+
   return (
    <div
       className={`min-h-screen font-sans pb-20 relative bg-cover bg-center bg-no-repeat bg-fixed transition-colors duration-300
         ${isDarkMode ? 'text-slate-900' : 'text-slate-900'} 
       `}
       style={{
-        // 3. กำหนด Logic สีพื้นหลัง
-        // Light Mode: ใช้เขียวเดิมของคุณ หรือลองใช้ #070618 (เขียวอ่อนสบายตา)
-        // Dark Mode: ใช้ #0f172a (Slate 900 - น้ำเงินเทาเข้ม)
         backgroundColor: isDarkMode ? "#6e7e88" : "#d3e0e2",
-        
-        // ถ้ามีรูปภาพ BG:
-        // backgroundImage: isDarkMode 
-        //   ? `linear-gradient(rgba(57, 95, 184, 0.9), rgba(15, 23, 42, 0.9)), url(${bgImage})` // Dark Overlay
-        //   : `linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 250, 0.7)), url(${bgImage})` // Light Overlay
       }}
     >
-      <div className="absolute top-4 right-4 z-50">
-        <button
-          onClick={toggleTheme}
-          className={`
-            p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110
-            ${isDarkMode 
-              ? 'bg-slate-800 text-yellow-400 hover:bg-slate-700' // Style ตอนมืด
-              : 'bg-white text-indigo-600 hover:bg-indigo-50'      // Style ตอนสว่าง
-            }
-          `}
-          title={isDarkMode ? "เปลี่ยนเป็นโหมดสว่าง" : "เปลี่ยนเป็นโหมดมืด"}
-        >
-          {isDarkMode ? <Sun size={24} /> : <Moon size={24} />}
-        </button>
-      </div>
-    
       {/* Loading Overlay */}
       {isLoading && (
         <div className="fixed inset-0 z-[100] bg-white/60 backdrop-blur-[2px] flex flex-col items-center justify-center transition-all animate-in fade-in duration-300">
@@ -611,7 +697,7 @@ export default function Report() {
       )}
 
       {/* Navigation Bar */}
-  <nav className="bg-white/10 dark:bg-slate-900/40 backdrop-blur-xl border-b border-white/20 dark:border-white/10 sticky top-0 z-50 px-6 lg:px-10 py-5 flex justify-between items-center shadow-lg transition-colors duration-300">
+  {false && ( <nav className="bg-white/10 dark:bg-slate-900/40 backdrop-blur-xl border-b border-white/20 dark:border-white/10 sticky top-0 z-50 px-6 lg:px-10 py-5 flex justify-between items-center shadow-lg transition-colors duration-300">
       
       {/* ฝั่งซ้าย: Logo & Title */}
       <div className="flex items-center gap-5">
@@ -685,153 +771,391 @@ export default function Report() {
         </button>
         
       </div>
-    </nav>
+    </nav> )}
 
       <div className="max-w-[1600px] mx-auto p-6 lg:p-10 space-y-8">
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[
-            {
-              id: "TODAY",
-              label: "Check-in วันนี้",
-              val: summary.today,
-              icon: <Users />,
-              color: "border-indigo-500 text-indigo-600",
-              bg: "bg-indigo-50",
-            },
-            {
-              id: "STAYING",
-              label: "ยังอยู่ในพื้นที่",
-              val: summary.staying,
-              icon: <Clock />,
-              color: "border-rose-500 text-rose-600",
-              bg: "bg-rose-50",
-              ping: true,
-            },
-            {
-              id: "CHECKOUT_TODAY",
-              label: "Check-out วันนี้",
-              val: summary.outToday,
-              icon: <CheckCircle />,
-              color: "border-emerald-500 text-emerald-600",
-              bg: "bg-emerald-50",
-            },
-            {
-              id: "ALL",
-              label: "ทั้งหมดในระบบ",
-              val: summary.all,
-              icon: <Calendar />,
-              color: "border-slate-500 text-slate-600",
-              bg: "bg-slate-50",
-            },
-          ].map((item) => (
-            <button
-              key={item.id}
-              onClick={() => {
-                setActiveFilter(item.id);
-                loadVisitors(item.id);
-              }}
-              className={`bg-white p-6 lg:p-8 rounded-[2.5rem] shadow-sm border-2 flex items-center justify-between transition-all hover:shadow-xl hover:-translate-y-1 text-left ${
-                activeFilter === item.id
-                  ? "border-indigo-600 ring-4 ring-indigo-50"
-                  : "border-transparent"
-              }`}
-            >
-              <div>
-                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">
-                  {item.label}
-                </p>
-                <p className="text-4xl lg:text-5xl font-black tracking-tighter text-slate-800">
-                  {item.val.toLocaleString()}
-                </p>
-              </div>
-              <div
-                className={`p-4 lg:p-5 rounded-[1.5rem] ${item.bg} ${item.color} relative`}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          {summaryCards.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setActiveFilter(item.id);
+                  loadVisitors(item.id);
+                }}
+                className={`bg-white p-5 rounded-lg border text-left transition-all hover:-translate-y-0.5 hover:shadow-lg ${
+                  activeFilter === item.id
+                    ? "border-slate-900 ring-4 ring-slate-200"
+                    : "border-slate-200"
+                }`}
               >
-                {item.icon}
-                {item.ping && item.val > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 rounded-full animate-ping border-4 border-white"></span>
-                )}
-              </div>
-            </button>
-          ))}
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+                        {item.label}
+                      </p>
+                      {item.live && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-rose-600">
+                          <span className="relative flex h-2.5 w-2.5">
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75"></span>
+                            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-rose-500"></span>
+                          </span>
+                          Live
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-2 text-4xl font-black tracking-tight text-slate-900">
+                      {item.value.toLocaleString()}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-500">
+                      {item.hint}
+                    </p>
+                    {item.live && (
+                      <div className="mt-3 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2">
+                        <div className="flex -space-x-2">
+                          {Array.from({ length: Math.min(item.value, 4) }).map((_, idx) => (
+                            <span
+                              key={idx}
+                              className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-rose-500 text-white shadow-sm"
+                              style={{ animationDelay: `${idx * 140}ms` }}
+                            >
+                              <Users size={12} className="animate-pulse" />
+                            </span>
+                          ))}
+                          {item.value > 4 && (
+                            <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-rose-200 text-[10px] font-black text-rose-700 shadow-sm">
+                              +{item.value - 4}
+                            </span>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-black text-rose-700">
+                            มีผู้มาติดต่ออยู่ในพื้นที่
+                          </p>
+                          <p className="text-[11px] font-bold text-rose-500">
+                            ต้องเฝ้าดูการเช็คเอ้าท์ต่อเนื่อง
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className={`relative p-3 rounded-lg border ${item.accent}`}>
+                    {item.live && (
+                      <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75"></span>
+                        <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-rose-500"></span>
+                      </span>
+                    )}
+                    <Icon size={24} className={item.live ? "animate-pulse" : ""} />
+                  </div>
+                </div>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Filter Section */}
-        <div className="bg-white p-6 lg:p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/40 border border-slate-100 flex flex-col lg:flex-row gap-6 items-end">
-          <div className="relative flex-1 w-full">
-            <label className="text-[11px] font-black text-slate-400 px-2 mb-2 block uppercase tracking-wider">
-              ค้นหารายชื่อ / บริษัท
-            </label>
+        {/* Operational Overview */}
+        <div className="grid grid-cols-1 xl:grid-cols-[1.35fr_0.95fr] gap-6">
+          <section className="bg-white border border-slate-200 rounded-lg shadow-sm p-6">
+            <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+              <div>
+                <div className="flex items-center gap-2 text-slate-500 font-bold text-xs uppercase tracking-wide">
+                  <BarChart3 size={16} />
+                  Overview
+                </div>
+                <h2 className="mt-2 text-2xl font-black text-slate-900">
+                  ภาพรวมการเข้าออกวันนี้
+                </h2>
+                <p className="mt-1 text-sm font-semibold text-slate-500">
+                  แสดงสถานะที่ รปภ. ต้องติดตามแบบเรียลไทม์
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  loadSummary();
+                  loadVisitors(activeFilter);
+                }}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-white"
+              >
+                <RefreshCw size={16} />
+                รีเฟรช
+              </button>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div className="rounded-lg bg-slate-50 border border-slate-200 p-4">
+                <div className="flex items-center justify-between text-sm font-bold text-slate-600">
+                  <span>ยังอยู่ในพื้นที่</span>
+                  <span>{activeRate}%</span>
+                </div>
+                <div className="mt-3 h-3 rounded-full bg-white border border-slate-200 overflow-hidden">
+                  <div
+                    className="h-full bg-rose-500"
+                    style={{ width: `${activeRate}%` }}
+                  />
+                </div>
+              </div>
+              <div className="rounded-lg bg-slate-50 border border-slate-200 p-4">
+                <div className="flex items-center justify-between text-sm font-bold text-slate-600">
+                  <span>เช็คเอ้าท์แล้ว</span>
+                  <span>{checkoutRate}%</span>
+                </div>
+                <div className="mt-3 h-3 rounded-full bg-white border border-slate-200 overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-500"
+                    style={{ width: `${checkoutRate}%` }}
+                  />
+                </div>
+              </div>
+              <div className="rounded-lg bg-slate-50 border border-slate-200 p-4">
+                <div className="flex items-center gap-2 text-sm font-bold text-slate-600">
+                  <TrendingUp size={16} className="text-blue-600" />
+                  ชุดข้อมูลที่แสดง
+                </div>
+                <p className="mt-2 text-3xl font-black text-slate-900">
+                  {visitors.length.toLocaleString()}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1fr_0.9fr] gap-6">
+              <div className="rounded-lg border border-slate-200 p-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-black text-slate-700">
+                    Check-in ตามช่วงเวลา
+                  </p>
+                  <p className="text-xs font-bold text-slate-400">
+                    {getFilterStatusText()}
+                  </p>
+                </div>
+                <div className="mt-5 flex h-36 items-end gap-2">
+                  {visibleHourlyBuckets.map((item) => (
+                    <div key={item.hour} className="flex flex-1 flex-col items-center gap-2">
+                      <div className="w-full h-28 flex items-end">
+                        <div
+                          className={`w-full rounded-t-md ${
+                            item.count > 0 ? "bg-blue-500" : "bg-slate-200"
+                          }`}
+                          style={{
+                            height: `${Math.max(8, (item.count / maxHourlyCount) * 100)}%`,
+                          }}
+                          title={`${String(item.hour).padStart(2, "0")}:00 - ${item.count} คน`}
+                        />
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-400">
+                        {String(item.hour).padStart(2, "0")}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 p-4">
+                <p className="text-sm font-black text-slate-700">
+                  วัตถุประสงค์ยอดนิยม
+                </p>
+                <div className="mt-4 space-y-3">
+                  {purposeBreakdown.length ? (
+                    purposeBreakdown.map(([label, count]) => (
+                      <div key={label}>
+                        <div className="flex justify-between gap-3 text-sm font-bold">
+                          <span className="truncate text-slate-700">{label}</span>
+                          <span className="text-slate-500">{count}</span>
+                        </div>
+                        <div className="mt-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                          <div
+                            className="h-full bg-amber-500"
+                            style={{ width: `${(count / maxPurposeCount) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm font-semibold text-slate-400">
+                      ยังไม่มีข้อมูลสำหรับกราฟนี้
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <aside className="bg-white border border-slate-200 rounded-lg shadow-sm p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 text-rose-600 font-bold text-xs uppercase tracking-wide">
+                  <AlertTriangle size={16} />
+                  Action Queue
+                </div>
+                <h2 className="mt-2 text-2xl font-black text-slate-900">
+                  รอเช็คเอ้าท์
+                </h2>
+                <p className="mt-1 text-sm font-semibold text-slate-500">
+                  รายการที่อยู่นานสุดขึ้นก่อน
+                </p>
+              </div>
+              <span className="rounded-lg bg-rose-50 px-3 py-2 text-lg font-black text-rose-600">
+                {summary.staying}
+              </span>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {priorityCheckoutList.length ? (
+                priorityCheckoutList.map((v) => (
+                  <div
+                    key={v.id}
+                    className="rounded-lg border border-slate-200 p-4 hover:border-rose-200 hover:bg-rose-50/40 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-base font-black text-slate-900">
+                          {v.full_name || "ไม่ระบุชื่อ"}
+                        </p>
+                        <p className="truncate text-sm font-semibold text-slate-500">
+                          {v.company || "ทั่วไป"} · {v.contact_person || "ไม่ระบุผู้ติดต่อ"}
+                        </p>
+                        <p className="mt-2 inline-flex items-center gap-2 rounded-md bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">
+                          <Clock size={13} />
+                          {calculateDuration(v.checkin_time)}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleCheckOut(v.id)}
+                        className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-black text-white hover:bg-emerald-700"
+                      >
+                        <CheckCircle size={16} />
+                        ออก
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center">
+                  <UserCheck className="mx-auto text-emerald-500" size={36} />
+                  <p className="mt-3 text-sm font-bold text-slate-500">
+                    ไม่มีรายการค้างเช็คเอ้าท์
+                  </p>
+                </div>
+              )}
+            </div>
+          </aside>
+        </div>
+
+        {/* Command Bar */}
+        <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-5 space-y-5">
+          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+            <div className="flex flex-wrap gap-2">
+              {quickFilters.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveFilter(item.id);
+                      loadVisitors(item.id);
+                    }}
+                    className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-black transition-colors ${
+                      activeFilter === item.id
+                        ? "border-slate-900 bg-slate-900 text-white"
+                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    <Icon size={16} />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => exportToExcel(selectedIds)}
+                disabled={selectedIds.length === 0}
+                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-black transition-colors ${
+                  selectedIds.length > 0
+                    ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                    : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                }`}
+              >
+                <Download size={16} />
+                Export ({selectedIds.length})
+              </button>
+              {selectedIds.length > 0 && (
+                <button
+                  onClick={deleteSelected}
+                  className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-black text-white hover:bg-rose-700"
+                >
+                  <Trash2 size={16} />
+                  ลบที่เลือก
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_auto_auto] gap-3">
             <div className="relative">
               <Search
-                size={20}
-                className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"
+                size={19}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
               />
               <input
                 type="text"
-                placeholder="ระบุชื่อหรือบริษัทที่ต้องการค้นหา..."
+                placeholder="ค้นหาชื่อ บริษัท คนที่มาติดต่อ หรือเบอร์โทร"
                 value={searchName}
                 onChange={(e) => setSearchName(e.target.value)}
-                className="w-full pl-14 pr-6 py-4 bg-slate-50 border-2 border-transparent focus:border-indigo-100 focus:bg-white focus:ring-4 focus:ring-indigo-50/50 rounded-[1.5rem] outline-none transition-all text-base font-semibold"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 py-3 pl-12 pr-4 text-sm font-semibold outline-none focus:border-slate-400 focus:bg-white"
               />
             </div>
-          </div>
-          <div className="flex gap-4 w-full lg:w-auto">
-            <div className="flex flex-col gap-2 flex-1 lg:flex-none">
-              <label className="text-[11px] font-black text-slate-400 px-2 uppercase tracking-wider">
-                ตั้งแต่วันที่
-              </label>
-              <input
-                type="date"
-                value={searchStart}
-                onChange={(e) => setSearchStart(e.target.value)}
-                className="bg-slate-50 px-5 py-4 rounded-2xl text-sm font-bold border-none focus:ring-2 focus:ring-indigo-500"
-              />
+            <input
+              type="date"
+              value={searchStart}
+              onChange={(e) => setSearchStart(e.target.value)}
+              className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold outline-none focus:border-slate-400 focus:bg-white"
+              title="ตั้งแต่วันที่"
+            />
+            <input
+              type="date"
+              value={searchEnd}
+              onChange={(e) => setSearchEnd(e.target.value)}
+              className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold outline-none focus:border-slate-400 focus:bg-white"
+              title="ถึงวันที่"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setActiveFilter("CUSTOM");
+                  loadVisitors("CUSTOM");
+                }}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-3 text-sm font-black text-white hover:bg-blue-700"
+              >
+                <Search size={16} />
+                ค้นหา
+              </button>
+              <button
+                onClick={() => {
+                  setSearchName("");
+                  setSearchStart("");
+                  setSearchEnd("");
+                  loadVisitors("TODAY");
+                  setActiveFilter("TODAY");
+                }}
+                className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-600 hover:bg-slate-50"
+                title="รีเซ็ต"
+              >
+                <RotateCcw size={18} />
+              </button>
             </div>
-            <div className="flex flex-col gap-2 flex-1 lg:flex-none">
-              <label className="text-[11px] font-black text-slate-400 px-2 uppercase tracking-wider">
-                ถึงวันที่
-              </label>
-              <input
-                type="date"
-                value={searchEnd}
-                onChange={(e) => setSearchEnd(e.target.value)}
-                className="bg-slate-50 px-5 py-4 rounded-2xl text-sm font-bold border-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-          </div>
-          <div className="flex gap-2 w-full lg:w-auto">
-            <button
-              onClick={() => {
-                setActiveFilter("CUSTOM");
-                loadVisitors("CUSTOM");
-              }}
-              className="flex-1 lg:flex-none px-10 py-4 bg-slate-900 text-white rounded-[1.5rem] font-black text-sm hover:bg-indigo-600 transition-all shadow-xl shadow-slate-200 active:scale-95"
-            >
-              ค้นหาข้อมูล
-            </button>
-            <button
-              onClick={() => {
-                setSearchName("");
-                setSearchStart("");
-                setSearchEnd("");
-                loadVisitors("TODAY");
-                setActiveFilter("TODAY");
-              }}
-              className="p-4 bg-slate-100 text-slate-500 rounded-2xl hover:bg-rose-50 hover:text-rose-500 transition-all"
-              title="รีเซ็ต"
-            >
-              <RotateCcw size={22} />
-            </button>
           </div>
         </div>
 
         {/* Table Results Bar */}
-        <div className="flex flex-col sm:flex-row justify-between items-center px-6 gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
           <div
             className={`
-  flex items-center gap-3 px-5 py-2.5 rounded-2xl border transition-all duration-300 ease-in-out
+  flex items-center gap-3 px-4 py-3 rounded-lg border transition-all duration-300 ease-in-out
   ${
     filterStyles[activeFilter] ||
     "bg-indigo-50 border-indigo-100 text-indigo-700"
@@ -855,7 +1179,7 @@ export default function Report() {
               </span>
             </div>
           </div>
-          <div className="text-slate-500 font-bold text-sm bg-white px-5 py-2.5 rounded-2xl shadow-sm border border-slate-100">
+          <div className="text-slate-500 font-bold text-sm bg-white px-4 py-3 rounded-lg shadow-sm border border-slate-200">
             พบทั้งหมด{" "}
             <span className="text-indigo-600 text-lg font-black mx-1">
               {visitors.length}
@@ -865,12 +1189,12 @@ export default function Report() {
         </div>
 
         {/* Main Table Content */}
-        <div className="bg-white rounded-[3rem] shadow-2xl shadow-slate-200/60 border border-slate-100 overflow-hidden transition-all">
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden transition-all">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-100">
-                  <th className="p-7 text-center w-20">
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="px-5 py-4 text-center w-16">
                     <input
                       type="checkbox"
                       className="w-5 h-5 cursor-pointer accent-indigo-600 rounded-lg"
@@ -881,29 +1205,29 @@ export default function Report() {
                       onChange={toggleSelectAll}
                     />
                   </th>
-                  <th className="p-7 text-[20px] font-black text-slate-400 uppercase tracking-widest">
+                  <th className="px-5 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">
                     ข้อมูลผู้ติดต่อ
                   </th>
-                  <th className="p-7 text-[20px] font-black text-slate-400 uppercase tracking-widest">
+                  <th className="px-5 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">
                     บริษัท & วัตถุประสงค์
                   </th>
-                  <th className="p-7 text-[20px] font-black text-slate-400 uppercase tracking-widest">
+                  <th className="px-5 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">
                     สถานะเวลา (24H)
                   </th>
-                  <th className="p-7 text-[20px] font-black text-slate-400 uppercase tracking-widest text-center">
+                  <th className="px-5 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-right">
                     จัดการ
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-100">
                 {visitors.map((v) => (
                   <tr
                     key={v.id}
-                    className={`group hover:bg-slate-50/50 transition-all ${
+                    className={`group hover:bg-slate-50 transition-all ${
                       selectedIds.includes(v.id) ? "bg-indigo-50/40" : ""
                     }`}
                   >
-                    <td className="p-7 text-center">
+                    <td className="px-5 py-4 text-center">
                       <input
                         type="checkbox"
                         className="w-5 h-5 cursor-pointer accent-indigo-600 rounded-lg"
@@ -911,14 +1235,14 @@ export default function Report() {
                         onChange={() => toggleSelect(v.id)}
                       />
                     </td>
-                    <td className="p-7">
+                    <td className="px-5 py-4">
                       <div className="space-y-1.5">
                         <div className="flex items-center gap-3">
                           <span className="px-2 py-0.5 bg-slate-100 rounded text-[10px] font-black text-slate-400">
                             #{v.id}
                           </span>
                           {/* ค้นหาบรรทัด {v.full_name} แล้วแก้เป็นแบบนี้ */}
-                          <div className="font-black text-slate-800 text-lg lg:text-xl tracking-tight leading-tight flex items-center gap-2">
+                          <div className="font-black text-slate-800 text-base lg:text-lg tracking-tight leading-tight flex items-center gap-2">
                             {v.full_name}
                             {!v.checkout_time && (
                               <span className="flex h-3 w-3 relative">
@@ -934,18 +1258,18 @@ export default function Report() {
                         </div>
                       </div>
                     </td>
-                    <td className="p-7">
+                    <td className="px-5 py-4">
                       <div className="space-y-3">
                         <div className="flex items-center gap-3 text-slate-700 font-extrabold text-base">
                           <Building2 size={18} className="text-slate-300" />
                           {v.company || "ทั่วไป"}
                         </div>
-                        <div className="inline-flex px-4 py-1.5 bg-white border-2 border-slate-100 text-slate-500 rounded-[1rem] text-[10px] font-black uppercase tracking-wide">
+                        <div className="inline-flex px-3 py-1.5 bg-white border border-slate-200 text-slate-500 rounded-md text-[11px] font-black">
                           {translatePurpose(v.purpose, v.other_purpose)}
                         </div>
                       </div>
                     </td>
-                    <td className="p-7">
+                    <td className="px-5 py-4">
                       <div className="flex flex-col gap-2 font-mono">
                         <div className="flex items-center gap-4 text-slate-400">
                           <span className="w-14 text-center font-black text-[10px] bg-slate-100 rounded-lg py-1">
@@ -983,41 +1307,33 @@ export default function Report() {
                         </div>
                       </div>
                     </td>
-                    <td className="p-7">
-                      <div className="flex justify-center items-center gap-3">
+                    <td className="px-5 py-4">
+                      <div className="flex justify-end items-center gap-2">
                         {!v.checkout_time && (
                           <button
                             onClick={() => handleCheckOut(v.id)}
-                            className="p-3.5 bg-emerald-500 text-white rounded-2xl shadow-lg hover:bg-emerald-600 transition-colors"
+                            className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-black hover:bg-emerald-700 transition-colors"
+                            title="เช็คเอ้าท์"
                           >
-                            <CheckCircle size={20} />
+                            <CheckCircle size={17} />
+                            เช็คเอ้าท์
                           </button>
                         )}
                         <button
-                          onClick={() => {
-                            setEditingId(v.id);
-                            setEditForm({
-                              ...v,
-                              purpose: normalizePurpose(v.purpose),
-                              checkin_time: toLocalDatetimeInput(
-                                v.checkin_time
-                              ),
-                              checkout_time: v.checkout_time
-                                ? toLocalDatetimeInput(v.checkout_time)
-                                : "",
-                            });
-                          }}
-                          className="p-3.5 bg-white border-2 border-slate-100 text-indigo-600 rounded-2xl hover:bg-indigo-50 transition-colors"
+                          onClick={() => openEdit(v)}
+                          className="p-2.5 bg-white border border-slate-200 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors"
+                          title="แก้ไข"
                         >
-                          <Edit size={20} />
+                          <Edit size={18} />
                         </button>
                         <button
                           onClick={() =>
                             window.open(`/print/${v.id}`, "_blank")
                           }
-                          className="p-3.5 bg-white border-2 border-slate-100 text-slate-600 rounded-2xl hover:bg-slate-50 transition-colors"
+                          className="p-2.5 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
+                          title="พิมพ์สลิป"
                         >
-                          <Printer size={20} />
+                          <Printer size={18} />
                         </button>
                         <button
                           onClick={async () => {
@@ -1030,9 +1346,10 @@ export default function Report() {
                               loadSummary();
                             }
                           }}
-                          className="p-3.5 bg-white border-2 border-slate-100 text-rose-500 rounded-2xl hover:bg-rose-50 transition-colors"
+                          className="p-2.5 bg-white border border-slate-200 text-rose-500 rounded-lg hover:bg-rose-50 transition-colors"
+                          title="ลบ"
                         >
-                          <Trash2 size={20} />
+                          <Trash2 size={18} />
                         </button>
                       </div>
                     </td>
@@ -1041,10 +1358,10 @@ export default function Report() {
                 {/* ส่วนแสดงผลกรณีไม่มีข้อมูล */}
                 {!isLoading && visitors.length === 0 && (
                   <tr>
-                    <td colSpan="6" className="p-32 text-center">
+                    <td colSpan="6" className="p-20 text-center">
                       <div className="flex flex-col items-center gap-4 opacity-40">
                         <Search size={64} className="text-slate-300" />
-                        <p className="text-slate-400 font-black italic text-xl">
+                        <p className="text-slate-400 font-black italic text-lg">
                           — ไม่พบรายการข้อมูลที่ตรงตามเงื่อนไข —
                         </p>
                       </div>

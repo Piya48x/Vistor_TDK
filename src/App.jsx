@@ -11,6 +11,22 @@ const translations = {
     // Step 1
     step1Title: "ถ่ายรูปบัตร หรือ นามบัตร",
     step1Guide: "กรุณาวางบัตรประชาชน หรือเอกสารสำคัญให้เห็นชัดเจนในกรอบ",
+    openCamera: "เปิดกล้องเพื่อถ่ายบัตร",
+    cameraStarting: "กำลังเปิดกล้อง...",
+    cameraReady: "วางบัตรในกรอบให้ชัดเจน",
+    autoCaptureIn: "ถ่ายอัตโนมัติใน",
+    autoCaptureHint: "ระบบจะถ่ายอัตโนมัติเมื่อพบบัตรในกรอบและภาพชัดเท่านั้น",
+    detectingCard: "กำลังตรวจหาบัตรในกรอบ",
+    alignCard: "วางบัตรให้เต็มกรอบและอยู่นิ่ง",
+    focusCard: "ขยับกล้องให้ภาพคมชัดขึ้น",
+    holdStill: "จับภาพนิ่งไว้",
+    cardLocked: "พร้อมถ่าย",
+    manualCaptureReady: "ถ่ายเองได้แล้ว",
+    cameraFallback: "ถ่ายผ่านกล้องของมือถือ",
+    cameraUnsupportedTitle: "กล้องยังเปิดไม่ได้",
+    cameraUnsupportedText: "เบราว์เซอร์นี้อาจไม่อนุญาตให้เว็บเข้าถึงกล้องโดยตรง กรุณาใช้ปุ่มถ่ายผ่านกล้องของมือถือ หรือเปิดใน Chrome",
+    cameraPermissionError: "กรุณาอนุญาตการใช้งานกล้อง แล้วลองอีกครั้ง",
+    openChrome: "เปิดใน Chrome",
     takePhoto: "📸 ถ่ายภาพเอกสาร",
     usePhoto: "ใช้รูปนี้และกรอกข้อมูล ➔",
     retakePhoto: "ถ่ายภาพใหม่อีกครั้ง",
@@ -57,6 +73,22 @@ const translations = {
     // Step 1
     step1Title: "Take Photo of ID Card or Business Card",
     step1Guide: "Please place your ID card or important document clearly within the frame",
+    openCamera: "Open Camera",
+    cameraStarting: "Opening camera...",
+    cameraReady: "Place the card clearly inside the frame",
+    autoCaptureIn: "Auto capture in",
+    autoCaptureHint: "Auto capture starts only when a clear card is detected inside the frame",
+    detectingCard: "Detecting card in frame",
+    alignCard: "Fill the frame with the card and hold still",
+    focusCard: "Move the camera until the image is sharp",
+    holdStill: "Hold still",
+    cardLocked: "Ready to capture",
+    manualCaptureReady: "Manual capture is available",
+    cameraFallback: "Use Phone Camera",
+    cameraUnsupportedTitle: "Camera is not available",
+    cameraUnsupportedText: "This browser may not allow direct camera access. Use the phone camera button or open this page in Chrome.",
+    cameraPermissionError: "Please allow camera access and try again",
+    openChrome: "Open in Chrome",
     takePhoto: "📸 Take Photo",
     usePhoto: "Use This Photo & Fill Info ➔",
     retakePhoto: "Retake Photo",
@@ -103,6 +135,22 @@ const translations = {
     // Step 1
     step1Title: "신분증 또는 명함 사진 촬영",
     step1Guide: "신분증이나 중요 문서를 프레임 안에 명확하게 배치해 주세요",
+    openCamera: "카메라 열기",
+    cameraStarting: "카메라를 여는 중...",
+    cameraReady: "카드를 프레임 안에 맞춰 주세요",
+    autoCaptureIn: "자동 촬영까지",
+    autoCaptureHint: "프레임 안에 선명한 카드가 감지될 때만 자동 촬영됩니다",
+    detectingCard: "프레임 안의 카드를 감지 중",
+    alignCard: "카드를 프레임에 맞추고 고정해 주세요",
+    focusCard: "이미지가 선명해지도록 조정해 주세요",
+    holdStill: "잠시 고정해 주세요",
+    cardLocked: "촬영 준비 완료",
+    manualCaptureReady: "직접 촬영할 수 있습니다",
+    cameraFallback: "휴대폰 카메라 사용",
+    cameraUnsupportedTitle: "카메라를 열 수 없습니다",
+    cameraUnsupportedText: "이 브라우저에서는 카메라 접근이 제한될 수 있습니다. 휴대폰 카메라 버튼을 사용하거나 Chrome에서 열어 주세요.",
+    cameraPermissionError: "카메라 접근을 허용한 후 다시 시도해 주세요",
+    openChrome: "Chrome에서 열기",
     takePhoto: "📸 사진 촬영",
     usePhoto: "이 사진 사용 및 정보 입력 ➔",
     retakePhoto: "사진 다시 찍기",
@@ -147,10 +195,250 @@ const translations = {
   }
 };
 
+const CARD_ASPECT_RATIO = 1.586;
+const CARD_HOLD_MS = 1200;
+const MANUAL_CAPTURE_UNLOCK_MS = 30000;
+const CAMERA_VIEW_ASPECT_RATIO = 4 / 3;
+const GUIDE_WIDTH_RATIO = 0.84;
+
+const getVisibleSourceRect = (sourceWidth, sourceHeight) => {
+  const sourceAspect = sourceWidth / sourceHeight;
+
+  if (sourceAspect > CAMERA_VIEW_ASPECT_RATIO) {
+    const width = sourceHeight * CAMERA_VIEW_ASPECT_RATIO;
+    return {
+      x: (sourceWidth - width) / 2,
+      y: 0,
+      width,
+      height: sourceHeight,
+    };
+  }
+
+  const height = sourceWidth / CAMERA_VIEW_ASPECT_RATIO;
+  return {
+    x: 0,
+    y: (sourceHeight - height) / 2,
+    width: sourceWidth,
+    height,
+  };
+};
+
+const analyzeCardFrame = (source, canvas) => {
+  if (!source || !canvas) {
+    return { ok: false, reason: "align" };
+  }
+
+  if (source.readyState !== undefined && source.readyState < 2) {
+    return { ok: false, reason: "align" };
+  }
+
+  const sourceWidth = source.videoWidth || source.naturalWidth || source.width;
+  const sourceHeight = source.videoHeight || source.naturalHeight || source.height;
+  if (!sourceWidth || !sourceHeight) {
+    return { ok: false, reason: "align" };
+  }
+
+  const visible = getVisibleSourceRect(sourceWidth, sourceHeight);
+  const sampleWidth = 320;
+  const sampleHeight = Math.round(sampleWidth / CAMERA_VIEW_ASPECT_RATIO);
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+  canvas.width = sampleWidth;
+  canvas.height = sampleHeight;
+  ctx.drawImage(
+    source,
+    visible.x,
+    visible.y,
+    visible.width,
+    visible.height,
+    0,
+    0,
+    sampleWidth,
+    sampleHeight
+  );
+
+  const { data } = ctx.getImageData(0, 0, sampleWidth, sampleHeight);
+  const gray = new Uint8Array(sampleWidth * sampleHeight);
+  const gradX = new Uint8Array(sampleWidth * sampleHeight);
+  const gradY = new Uint8Array(sampleWidth * sampleHeight);
+  let sum = 0;
+
+  for (let i = 0, p = 0; i < data.length; i += 4, p += 1) {
+    const value = Math.round(data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114);
+    gray[p] = value;
+    sum += value;
+  }
+
+  const mean = sum / gray.length;
+  let varianceSum = 0;
+  let innerGradientSum = 0;
+  let innerVarianceSum = 0;
+  let innerSamples = 0;
+  const rectWidth = sampleWidth * GUIDE_WIDTH_RATIO;
+  const rectHeight = rectWidth / CARD_ASPECT_RATIO;
+  const rectX = (sampleWidth - rectWidth) / 2;
+  const rectY = (sampleHeight - rectHeight) / 2;
+  const innerLeft = Math.round(rectX + rectWidth * 0.18);
+  const innerRight = Math.round(rectX + rectWidth * 0.82);
+  const innerTop = Math.round(rectY + rectHeight * 0.2);
+  const innerBottom = Math.round(rectY + rectHeight * 0.8);
+
+  for (let y = 1; y < sampleHeight - 1; y += 1) {
+    for (let x = 1; x < sampleWidth - 1; x += 1) {
+      const idx = y * sampleWidth + x;
+      const gx = Math.abs(gray[idx + 1] - gray[idx - 1]);
+      const gy = Math.abs(gray[idx + sampleWidth] - gray[idx - sampleWidth]);
+      gradX[idx] = Math.min(gx, 255);
+      gradY[idx] = Math.min(gy, 255);
+      varianceSum += (gray[idx] - mean) ** 2;
+
+      if (x >= innerLeft && x <= innerRight && y >= innerTop && y <= innerBottom) {
+        innerSamples += 1;
+        innerGradientSum += gx + gy;
+        innerVarianceSum += (gray[idx] - mean) ** 2;
+      }
+    }
+  }
+
+  const sampleCount = (sampleWidth - 2) * (sampleHeight - 2);
+  const variance = varianceSum / sampleCount;
+  const innerSharpness = innerGradientSum / Math.max(innerSamples, 1);
+  const innerVariance = innerVarianceSum / Math.max(innerSamples, 1);
+  const edgeThreshold = Math.max(34, Math.min(72, Math.sqrt(variance) * 2.4));
+  const sideBand = Math.round(sampleWidth * 0.04);
+  const rectLeft = Math.round(rectX);
+  const rectRight = Math.round(rectX + rectWidth);
+  const rectTop = Math.round(rectY);
+  const rectBottom = Math.round(rectY + rectHeight);
+
+  const scanVerticalEdge = (edgeX) => {
+    let hits = 0;
+    let samples = 0;
+    const yStart = Math.round(rectY + rectHeight * 0.12);
+    const yEnd = Math.round(rectY + rectHeight * 0.88);
+
+    for (let y = yStart; y <= yEnd; y += 2) {
+      let maxEdge = 0;
+      for (let x = edgeX - sideBand; x <= edgeX + sideBand; x += 1) {
+        if (x <= 1 || x >= sampleWidth - 2 || y <= 1 || y >= sampleHeight - 2) continue;
+        maxEdge = Math.max(maxEdge, gradX[y * sampleWidth + x]);
+      }
+      if (maxEdge >= edgeThreshold) hits += 1;
+      samples += 1;
+    }
+
+    return hits / Math.max(samples, 1);
+  };
+
+  const scanHorizontalEdge = (edgeY) => {
+    let hits = 0;
+    let samples = 0;
+    const xStart = Math.round(rectX + rectWidth * 0.1);
+    const xEnd = Math.round(rectX + rectWidth * 0.9);
+
+    for (let x = xStart; x <= xEnd; x += 2) {
+      let maxEdge = 0;
+      for (let y = edgeY - sideBand; y <= edgeY + sideBand; y += 1) {
+        if (x <= 1 || x >= sampleWidth - 2 || y <= 1 || y >= sampleHeight - 2) continue;
+        maxEdge = Math.max(maxEdge, gradY[y * sampleWidth + x]);
+      }
+      if (maxEdge >= edgeThreshold) hits += 1;
+      samples += 1;
+    }
+
+    return hits / Math.max(samples, 1);
+  };
+
+  const averageGray = (xStart, xEnd, yStart, yEnd) => {
+    const left = Math.max(0, Math.round(Math.min(xStart, xEnd)));
+    const right = Math.min(sampleWidth - 1, Math.round(Math.max(xStart, xEnd)));
+    const top = Math.max(0, Math.round(Math.min(yStart, yEnd)));
+    const bottom = Math.min(sampleHeight - 1, Math.round(Math.max(yStart, yEnd)));
+    let total = 0;
+    let count = 0;
+
+    for (let y = top; y <= bottom; y += 1) {
+      for (let x = left; x <= right; x += 1) {
+        total += gray[y * sampleWidth + x];
+        count += 1;
+      }
+    }
+
+    return total / Math.max(count, 1);
+  };
+
+  const yBandStart = Math.round(rectY + rectHeight * 0.18);
+  const yBandEnd = Math.round(rectY + rectHeight * 0.82);
+  const xBandStart = Math.round(rectX + rectWidth * 0.14);
+  const xBandEnd = Math.round(rectX + rectWidth * 0.86);
+  const contrastBand = Math.max(8, Math.round(sideBand * 0.8));
+  const sideContrasts = {
+    left: Math.abs(
+      averageGray(rectLeft + 3, rectLeft + contrastBand, yBandStart, yBandEnd) -
+        averageGray(rectLeft - contrastBand, rectLeft - 3, yBandStart, yBandEnd)
+    ),
+    right: Math.abs(
+      averageGray(rectRight - contrastBand, rectRight - 3, yBandStart, yBandEnd) -
+        averageGray(rectRight + 3, rectRight + contrastBand, yBandStart, yBandEnd)
+    ),
+    top: Math.abs(
+      averageGray(xBandStart, xBandEnd, rectTop + 3, rectTop + contrastBand) -
+        averageGray(xBandStart, xBandEnd, rectTop - contrastBand, rectTop - 3)
+    ),
+    bottom: Math.abs(
+      averageGray(xBandStart, xBandEnd, rectBottom - contrastBand, rectBottom - 3) -
+        averageGray(xBandStart, xBandEnd, rectBottom + 3, rectBottom + contrastBand)
+    ),
+  };
+
+  const sideScores = {
+    left: scanVerticalEdge(rectLeft),
+    right: scanVerticalEdge(rectRight),
+    top: scanHorizontalEdge(rectTop),
+    bottom: scanHorizontalEdge(rectBottom),
+  };
+
+  const sidesPresent = Object.values(sideScores).filter((score) => score >= 0.48).length;
+  const contrastSides = Object.values(sideContrasts).filter((contrast) => contrast >= 8).length;
+  const allSidesStrong = sidesPresent === 4 && contrastSides >= 3 && Math.min(...Object.values(sideContrasts)) >= 5;
+
+  if (mean < 45 || mean > 238) {
+    return { ok: false, reason: "align" };
+  }
+
+  if (!allSidesStrong) {
+    return {
+      ok: false,
+      reason: "align",
+      score: Math.round(Math.min(...Object.values(sideScores)) * 100),
+      sideScores,
+      sideContrasts,
+    };
+  }
+
+  if (innerSharpness < 18 || innerVariance < 95) {
+    return { ok: false, reason: "focus" };
+  }
+
+  return {
+    ok: true,
+    reason: "ready",
+    score: Math.round(Math.min(...Object.values(sideScores)) * 100),
+    sideScores,
+    sideContrasts,
+  };
+};
+
 export default function App() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [cameraActive, setCameraActive] = useState(true);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraStatus, setCameraStatus] = useState("idle");
+  const [cameraError, setCameraError] = useState("");
+  const [autoCountdown, setAutoCountdown] = useState(null);
+  const [cardStatus, setCardStatus] = useState("idle");
+  const [cardMessage, setCardMessage] = useState("");
+  const [manualCaptureUnlocked, setManualCaptureUnlocked] = useState(false);
   const [photoDataUrl, setPhotoDataUrl] = useState("");
   const [historyList, setHistoryList] = useState([]);
   const [language, setLanguage] = useState("th"); // 'th', 'en', 'ko'
@@ -179,6 +467,14 @@ export default function App() {
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const autoTimerRef = useRef(null);
+  const detectionTimerRef = useRef(null);
+  const manualUnlockTimerRef = useRef(null);
+  const analysisCanvasRef = useRef(null);
+  const cardReadySinceRef = useRef(null);
+  const captureLockedRef = useRef(false);
+  const isLineBrowser = /Line\//i.test(navigator.userAgent);
 
   const handleLanguageChange = (lang) => {
   setLanguage(lang);
@@ -215,39 +511,258 @@ useEffect(() => {
   }, [language]);
 
   useEffect(() => {
-    if (step === 1 && cameraActive) {
-      startCamera();
-    } else {
+    if (step !== 1) {
       stopCamera();
     }
     return () => stopCamera();
-  }, [step, cameraActive]);
+  }, [step]);
 
   const startCamera = async () => {
+    resetCardDetection();
+    setPhotoDataUrl("");
+    setCameraError("");
+    setCameraStatus("starting");
+    setCameraActive(true);
+    setCardStatus("searching");
+    setCardMessage(t.detectingCard);
+
     try {
+      if (!window.isSecureContext && window.location.hostname !== "localhost") {
+        throw new Error("INSECURE_CONTEXT");
+      }
+
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("UNSUPPORTED_CAMERA");
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment", width: 1280, height: 720 },
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
       });
       streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
+
+      const [track] = stream.getVideoTracks();
+      if (track?.applyConstraints) {
+        track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {});
+      }
+
+      if (!videoRef.current) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play().catch(() => {});
+      }
+
+      setCameraStatus("ready");
+      startCardDetection();
+      startManualCaptureUnlockTimer();
     } catch (err) {
       console.error("Camera Error:", err);
+      const blockedByPermission = err.name === "NotAllowedError" || err.name === "SecurityError";
+      setCameraError(blockedByPermission ? t.cameraPermissionError : t.cameraUnsupportedText);
+      setCameraStatus("error");
+      setCameraActive(false);
+      resetCardDetection();
+      stopCamera();
     }
   };
 
   const stopCamera = () => {
+    resetCardDetection();
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
     }
   };
 
-  const takeSnapshot = () => {
+  const clearAutoCapture = () => {
+    if (autoTimerRef.current) {
+      clearInterval(autoTimerRef.current);
+      autoTimerRef.current = null;
+    }
+    setAutoCountdown(null);
+  };
+
+  const clearCardDetectionTimer = () => {
+    if (detectionTimerRef.current) {
+      clearInterval(detectionTimerRef.current);
+      detectionTimerRef.current = null;
+    }
+  };
+
+  const clearManualCaptureUnlockTimer = () => {
+    if (manualUnlockTimerRef.current) {
+      clearTimeout(manualUnlockTimerRef.current);
+      manualUnlockTimerRef.current = null;
+    }
+  };
+
+  const resetCardDetection = () => {
+    clearAutoCapture();
+    clearCardDetectionTimer();
+    clearManualCaptureUnlockTimer();
+    cardReadySinceRef.current = null;
+    captureLockedRef.current = false;
+    setCardStatus("idle");
+    setCardMessage("");
+    setManualCaptureUnlocked(false);
+  };
+
+  const startManualCaptureUnlockTimer = () => {
+    clearManualCaptureUnlockTimer();
+    setManualCaptureUnlocked(false);
+    manualUnlockTimerRef.current = setTimeout(() => {
+      manualUnlockTimerRef.current = null;
+      setManualCaptureUnlocked(true);
+      setCardMessage(t.manualCaptureReady);
+    }, MANUAL_CAPTURE_UNLOCK_MS);
+  };
+
+  const startAutoCapture = (remainingMs) => {
+    clearAutoCapture();
+    let seconds = Math.max(1, Math.ceil(remainingMs / 1000));
+    setAutoCountdown(seconds);
+    autoTimerRef.current = setInterval(() => {
+      seconds -= 1;
+      if (seconds <= 0) {
+        clearAutoCapture();
+        return;
+      }
+      setAutoCountdown(seconds);
+    }, 1000);
+  };
+
+  const startCardDetection = () => {
+    clearCardDetectionTimer();
+    analysisCanvasRef.current = analysisCanvasRef.current || document.createElement("canvas");
+
+    detectionTimerRef.current = setInterval(() => {
+      const result = analyzeCardFrame(videoRef.current, analysisCanvasRef.current);
+      const now = Date.now();
+
+      if (!result.ok) {
+        cardReadySinceRef.current = null;
+        captureLockedRef.current = false;
+        clearAutoCapture();
+        setCardStatus(result.reason === "focus" ? "focus" : "searching");
+        setCardMessage(result.reason === "focus" ? t.focusCard : t.alignCard);
+        return;
+      }
+
+      if (!cardReadySinceRef.current) {
+        cardReadySinceRef.current = now;
+        startAutoCapture(CARD_HOLD_MS);
+      }
+
+      const holdMs = now - cardReadySinceRef.current;
+      const remainingMs = Math.max(CARD_HOLD_MS - holdMs, 0);
+      const ready = holdMs >= CARD_HOLD_MS;
+
+      setCardStatus(ready ? "ready" : "holding");
+      setCardMessage(ready ? t.cardLocked : t.holdStill);
+      setAutoCountdown(ready ? null : Math.max(1, Math.ceil(remainingMs / 1000)));
+
+      if (ready && !captureLockedRef.current) {
+        captureLockedRef.current = true;
+        clearAutoCapture();
+        window.setTimeout(() => {
+          const finalCheck = analyzeCardFrame(videoRef.current, analysisCanvasRef.current);
+          if (finalCheck.ok) {
+            takeSnapshot(true);
+            return;
+          }
+
+          cardReadySinceRef.current = null;
+          captureLockedRef.current = false;
+          setCardStatus(finalCheck.reason === "focus" ? "focus" : "searching");
+          setCardMessage(finalCheck.reason === "focus" ? t.focusCard : t.alignCard);
+        }, 180);
+      }
+    }, 250);
+  };
+
+  const takeSnapshot = (skipGate = false) => {
+    if (!videoRef.current || videoRef.current.readyState < 2) {
+      return;
+    }
+
+    if (!skipGate && cardStatus !== "ready" && !manualCaptureUnlocked) {
+      return;
+    }
+
+    if (!skipGate && !manualCaptureUnlocked) {
+      const finalCheckCanvas = analysisCanvasRef.current || document.createElement("canvas");
+      const finalCheck = analyzeCardFrame(videoRef.current, finalCheckCanvas);
+      if (!finalCheck.ok) {
+        cardReadySinceRef.current = null;
+        captureLockedRef.current = false;
+        clearAutoCapture();
+        setCardStatus(finalCheck.reason === "focus" ? "focus" : "searching");
+        setCardMessage(finalCheck.reason === "focus" ? t.focusCard : t.alignCard);
+        return;
+      }
+    }
+
+    resetCardDetection();
     const canvas = document.createElement("canvas");
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
-    canvas.getContext("2d").drawImage(videoRef.current, 0, 0);
-    setPhotoDataUrl(canvas.toDataURL("image/jpeg", 0.8));
+    canvas.width = videoRef.current.videoWidth || 1280;
+    canvas.height = videoRef.current.videoHeight || 720;
+    canvas.getContext("2d").drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+    setPhotoDataUrl(canvas.toDataURL("image/jpeg", 0.9));
     setCameraActive(false);
+    setCameraStatus("idle");
+    stopCamera();
+  };
+
+  const handleCameraFile = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const image = new Image();
+      image.onload = () => {
+        const checkCanvas = analysisCanvasRef.current || document.createElement("canvas");
+        const result = analyzeCardFrame(image, checkCanvas);
+
+        if (!result.ok) {
+          resetCardDetection();
+          stopCamera();
+          setCameraActive(false);
+          setCameraStatus("error");
+          setCameraError(result.reason === "focus" ? t.focusCard : t.alignCard);
+          return;
+        }
+
+        resetCardDetection();
+        stopCamera();
+        setPhotoDataUrl(reader.result);
+        setCameraActive(false);
+        setCameraStatus("idle");
+        setCameraError("");
+      };
+      image.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+    event.target.value = "";
+  };
+
+  const openInChrome = () => {
+    const currentUrl = window.location.href;
+    const withoutProtocol = currentUrl.replace(/^https?:\/\//, "");
+    const scheme = window.location.protocol.replace(":", "");
+
+    if (/Android/i.test(navigator.userAgent)) {
+      window.location.href = `intent://${withoutProtocol}#Intent;scheme=${scheme};package=com.android.chrome;end`;
+      return;
+    }
+
+    window.location.href = currentUrl.replace(/^https:\/\//, "googlechromes://").replace(/^http:\/\//, "googlechrome://");
   };
 
   const handleSubmit = async (e) => {
@@ -319,12 +834,18 @@ useEffect(() => {
       other_purpose: "",
     });
     setPhotoDataUrl("");
-    setCameraActive(true);
+    setCameraActive(false);
+    setCameraStatus("idle");
+    setCameraError("");
+    resetCardDetection();
     setStep(1);
   };
 
   const handleEditPhoto = () => {
-    setCameraActive(true);
+    setCameraActive(false);
+    setCameraStatus("idle");
+    setCameraError("");
+    resetCardDetection();
     setStep(1);
   };
 
@@ -591,10 +1112,44 @@ useEffect(() => {
           aspect-ratio: 4/3; 
           border: 3px solid #e2e8f0; 
         }
+        .camera-container.is-idle {
+          background: linear-gradient(135deg, #0f172a, #1f2937);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
         video, .snapshot { 
           width: 100%; 
           height: 100%; 
           object-fit: cover; 
+        }
+        .camera-placeholder {
+          color: white;
+          text-align: center;
+          padding: 28px;
+        }
+        .camera-placeholder-icon {
+          width: 68px;
+          height: 68px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.12);
+          border: 1px solid rgba(255,255,255,0.22);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 16px;
+          font-size: 30px;
+        }
+        .camera-placeholder-title {
+          font-size: clamp(18px, 4vw, 22px);
+          font-weight: 700;
+          margin-bottom: 8px;
+        }
+        .camera-placeholder-text {
+          font-size: clamp(13px, 3vw, 14px);
+          color: rgba(255,255,255,0.72);
+          line-height: 1.6;
+          margin: 0;
         }
         .id-card-overlay { 
           position: absolute; 
@@ -606,11 +1161,118 @@ useEffect(() => {
           pointer-events: none; 
         }
         .guide-box { 
-          width: 85%; 
-          height: 75%; 
-          border: 2px dashed rgba(255,255,255,0.6); 
-          border-radius: 12px; 
-          background: rgba(255,255,255,0.05); 
+          width: 84%; 
+          aspect-ratio: 1.586 / 1;
+          position: relative;
+          border: 1px solid rgba(255,255,255,0.42); 
+          border-radius: 14px; 
+          background: rgba(255,255,255,0.04); 
+          box-shadow: 0 0 0 999px rgba(0,0,0,0.34);
+          transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+        .guide-box.status-holding {
+          border-color: #fbbf24;
+          background: rgba(251,191,36,0.08);
+          box-shadow: 0 0 0 999px rgba(0,0,0,0.34), 0 0 28px rgba(251,191,36,0.45);
+        }
+        .guide-box.status-ready {
+          border-color: #22c55e;
+          background: rgba(34,197,94,0.08);
+          box-shadow: 0 0 0 999px rgba(0,0,0,0.28), 0 0 30px rgba(34,197,94,0.55);
+        }
+        .guide-corner {
+          position: absolute;
+          width: 30px;
+          height: 30px;
+          border-color: #ffffff;
+          border-style: solid;
+          transition: border-color 0.2s ease;
+        }
+        .guide-box.status-holding .guide-corner {
+          border-color: #fbbf24;
+        }
+        .guide-box.status-ready .guide-corner {
+          border-color: #22c55e;
+        }
+        .guide-corner.top-left {
+          top: -3px;
+          left: -3px;
+          border-width: 4px 0 0 4px;
+          border-top-left-radius: 14px;
+        }
+        .guide-corner.top-right {
+          top: -3px;
+          right: -3px;
+          border-width: 4px 4px 0 0;
+          border-top-right-radius: 14px;
+        }
+        .guide-corner.bottom-left {
+          bottom: -3px;
+          left: -3px;
+          border-width: 0 0 4px 4px;
+          border-bottom-left-radius: 14px;
+        }
+        .guide-corner.bottom-right {
+          right: -3px;
+          bottom: -3px;
+          border-width: 0 4px 4px 0;
+          border-bottom-right-radius: 14px;
+        }
+        .camera-status-pill {
+          position: absolute;
+          left: 50%;
+          bottom: 18px;
+          transform: translateX(-50%);
+          color: white;
+          background: rgba(0, 0, 0, 0.62);
+          border: 1px solid rgba(255,255,255,0.2);
+          border-radius: 999px;
+          padding: 8px 14px;
+          font-size: clamp(12px, 3vw, 14px);
+          font-weight: 600;
+          backdrop-filter: blur(8px);
+          white-space: nowrap;
+        }
+        .camera-status-pill.status-holding {
+          background: rgba(146, 64, 14, 0.82);
+          border-color: rgba(251,191,36,0.55);
+        }
+        .camera-status-pill.status-ready {
+          background: rgba(22, 101, 52, 0.86);
+          border-color: rgba(34,197,94,0.7);
+        }
+        .camera-help {
+          border-radius: 16px;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          color: #475569;
+          font-size: clamp(13px, 3vw, 14px);
+          line-height: 1.55;
+          padding: 12px 14px;
+          margin: 16px 0 0;
+        }
+        .camera-error {
+          border-color: #fecdd3;
+          background: #fff1f2;
+          color: #9f1239;
+        }
+        .camera-actions {
+          display: grid;
+          gap: 12px;
+          margin-top: 24px;
+        }
+        .btn-secondary {
+          background: #eef2ff;
+          color: var(--tdk-blue);
+        }
+        .btn-secondary:hover {
+          background: #e0e7ff;
+          transform: translateY(-2px);
+        }
+        .hidden-camera-input {
+          position: fixed;
+          left: -9999px;
+          opacity: 0;
         }
         .input-group { 
           margin-bottom: 20px; 
@@ -852,18 +1514,48 @@ useEffect(() => {
                 {t.step1Title}
               </h2>
               <br />
-              <div className="camera-container">
-                {cameraActive ? (
+              <div className={`camera-container ${!cameraActive && !photoDataUrl ? "is-idle" : ""}`}>
+                {photoDataUrl ? (
+                  <img src={photoDataUrl} className="snapshot" alt="Captured" />
+                ) : cameraActive ? (
                   <>
                     <video ref={videoRef} autoPlay playsInline muted />
                     <div className="id-card-overlay">
-                      <div className="guide-box"></div>
+                      <div className={`guide-box status-${cardStatus}`}>
+                        <span className="guide-corner top-left"></span>
+                        <span className="guide-corner top-right"></span>
+                        <span className="guide-corner bottom-left"></span>
+                        <span className="guide-corner bottom-right"></span>
+                      </div>
+                    </div>
+                    <div className={`camera-status-pill status-${cardStatus}`}>
+                      {manualCaptureUnlocked && cardStatus !== "ready"
+                        ? t.manualCaptureReady
+                        : cardStatus === "ready"
+                        ? t.cardLocked
+                        : autoCountdown
+                          ? `${t.holdStill} ${autoCountdown}`
+                        : cameraStatus === "starting"
+                          ? t.cameraStarting
+                          : cardMessage || t.detectingCard}
                     </div>
                   </>
                 ) : (
-                  <img src={photoDataUrl} className="snapshot" alt="Captured" />
+                  <div className="camera-placeholder">
+                    <div className="camera-placeholder-icon">▣</div>
+                    <div className="camera-placeholder-title">{t.openCamera}</div>
+                    <p className="camera-placeholder-text">{t.autoCaptureHint}</p>
+                  </div>
                 )}
               </div>
+              <input
+                ref={fileInputRef}
+                className="hidden-camera-input"
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleCameraFile}
+              />
               <br />
               <p style={{
                 textAlign: "center",
@@ -876,12 +1568,21 @@ useEffect(() => {
                 {t.step1Guide}
               </p>
 
-              <div style={{ marginTop: 30 }}>
-                {cameraActive ? (
-                  <button className="btn-action btn-tdk" onClick={takeSnapshot}>
-                    {t.takePhoto}
-                  </button>
-                ) : (
+              {!photoDataUrl && isLineBrowser && (
+                <div className="camera-help">
+                  LINE อาจจำกัดการเปิดกล้องโดยตรง ถ้ากล้องไม่ขึ้นให้กด “{t.cameraFallback}” หรือ “{t.openChrome}”
+                </div>
+              )}
+
+              {cameraError && (
+                <div className="camera-help camera-error">
+                  <strong>{t.cameraUnsupportedTitle}</strong><br />
+                  {cameraError}
+                </div>
+              )}
+
+              <div className="camera-actions">
+                {photoDataUrl ? (
                   <>
                     <button
                       className="btn-action btn-tdk"
@@ -891,10 +1592,35 @@ useEffect(() => {
                     </button>
                     <button
                       className="btn-action btn-ghost"
-                      onClick={() => setCameraActive(true)}
+                      onClick={startCamera}
                     >
                       {t.retakePhoto}
                     </button>
+                  </>
+                ) : cameraActive ? (
+                  <button className="btn-action btn-tdk" onClick={() => takeSnapshot()} disabled={!manualCaptureUnlocked && cardStatus !== "ready"}>
+                    {manualCaptureUnlocked || cardStatus === "ready" ? t.takePhoto : cardMessage || t.detectingCard}
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      className="btn-action btn-tdk"
+                      onClick={startCamera}
+                      disabled={cameraStatus === "starting"}
+                    >
+                      {cameraStatus === "starting" ? t.cameraStarting : t.openCamera}
+                    </button>
+                    <button
+                      className="btn-action btn-secondary"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {t.cameraFallback}
+                    </button>
+                    {(isLineBrowser || cameraError) && (
+                      <button className="btn-action btn-ghost" onClick={openInChrome}>
+                        {t.openChrome}
+                      </button>
+                    )}
                   </>
                 )}
               </div>
