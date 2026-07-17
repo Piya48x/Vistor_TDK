@@ -197,7 +197,6 @@ const translations = {
 
 const CARD_ASPECT_RATIO = 1.586;
 const CARD_HOLD_MS = 1200;
-const MANUAL_CAPTURE_UNLOCK_MS = 30000;
 const CAMERA_VIEW_ASPECT_RATIO = 4 / 3;
 const GUIDE_WIDTH_RATIO = 0.84;
 
@@ -438,7 +437,6 @@ export default function App() {
   const [autoCountdown, setAutoCountdown] = useState(null);
   const [cardStatus, setCardStatus] = useState("idle");
   const [cardMessage, setCardMessage] = useState("");
-  const [manualCaptureUnlocked, setManualCaptureUnlocked] = useState(false);
   const [photoDataUrl, setPhotoDataUrl] = useState("");
   const [historyList, setHistoryList] = useState([]);
   const [language, setLanguage] = useState("th"); // 'th', 'en', 'ko'
@@ -470,7 +468,6 @@ export default function App() {
   const fileInputRef = useRef(null);
   const autoTimerRef = useRef(null);
   const detectionTimerRef = useRef(null);
-  const manualUnlockTimerRef = useRef(null);
   const analysisCanvasRef = useRef(null);
   const cardReadySinceRef = useRef(null);
   const captureLockedRef = useRef(false);
@@ -560,7 +557,6 @@ useEffect(() => {
 
       setCameraStatus("ready");
       startCardDetection();
-      startManualCaptureUnlockTimer();
     } catch (err) {
       console.error("Camera Error:", err);
       const blockedByPermission = err.name === "NotAllowedError" || err.name === "SecurityError";
@@ -595,32 +591,13 @@ useEffect(() => {
     }
   };
 
-  const clearManualCaptureUnlockTimer = () => {
-    if (manualUnlockTimerRef.current) {
-      clearTimeout(manualUnlockTimerRef.current);
-      manualUnlockTimerRef.current = null;
-    }
-  };
-
   const resetCardDetection = () => {
     clearAutoCapture();
     clearCardDetectionTimer();
-    clearManualCaptureUnlockTimer();
     cardReadySinceRef.current = null;
     captureLockedRef.current = false;
     setCardStatus("idle");
     setCardMessage("");
-    setManualCaptureUnlocked(false);
-  };
-
-  const startManualCaptureUnlockTimer = () => {
-    clearManualCaptureUnlockTimer();
-    setManualCaptureUnlocked(false);
-    manualUnlockTimerRef.current = setTimeout(() => {
-      manualUnlockTimerRef.current = null;
-      setManualCaptureUnlocked(true);
-      setCardMessage(t.manualCaptureReady);
-    }, MANUAL_CAPTURE_UNLOCK_MS);
   };
 
   const startAutoCapture = (remainingMs) => {
@@ -673,7 +650,7 @@ useEffect(() => {
         window.setTimeout(() => {
           const finalCheck = analyzeCardFrame(videoRef.current, analysisCanvasRef.current);
           if (finalCheck.ok) {
-            takeSnapshot(true);
+            takeSnapshot();
             return;
           }
 
@@ -686,26 +663,9 @@ useEffect(() => {
     }, 250);
   };
 
-  const takeSnapshot = (skipGate = false) => {
+  const takeSnapshot = () => {
     if (!videoRef.current || videoRef.current.readyState < 2) {
       return;
-    }
-
-    if (!skipGate && cardStatus !== "ready" && !manualCaptureUnlocked) {
-      return;
-    }
-
-    if (!skipGate && !manualCaptureUnlocked) {
-      const finalCheckCanvas = analysisCanvasRef.current || document.createElement("canvas");
-      const finalCheck = analyzeCardFrame(videoRef.current, finalCheckCanvas);
-      if (!finalCheck.ok) {
-        cardReadySinceRef.current = null;
-        captureLockedRef.current = false;
-        clearAutoCapture();
-        setCardStatus(finalCheck.reason === "focus" ? "focus" : "searching");
-        setCardMessage(finalCheck.reason === "focus" ? t.focusCard : t.alignCard);
-        return;
-      }
     }
 
     resetCardDetection();
@@ -725,28 +685,12 @@ useEffect(() => {
 
     const reader = new FileReader();
     reader.onload = () => {
-      const image = new Image();
-      image.onload = () => {
-        const checkCanvas = analysisCanvasRef.current || document.createElement("canvas");
-        const result = analyzeCardFrame(image, checkCanvas);
-
-        if (!result.ok) {
-          resetCardDetection();
-          stopCamera();
-          setCameraActive(false);
-          setCameraStatus("error");
-          setCameraError(result.reason === "focus" ? t.focusCard : t.alignCard);
-          return;
-        }
-
-        resetCardDetection();
-        stopCamera();
-        setPhotoDataUrl(reader.result);
-        setCameraActive(false);
-        setCameraStatus("idle");
-        setCameraError("");
-      };
-      image.src = reader.result;
+      resetCardDetection();
+      stopCamera();
+      setPhotoDataUrl(typeof reader.result === "string" ? reader.result : "");
+      setCameraActive(false);
+      setCameraStatus("idle");
+      setCameraError("");
     };
     reader.readAsDataURL(file);
     event.target.value = "";
@@ -1529,9 +1473,7 @@ useEffect(() => {
                       </div>
                     </div>
                     <div className={`camera-status-pill status-${cardStatus}`}>
-                      {manualCaptureUnlocked && cardStatus !== "ready"
-                        ? t.manualCaptureReady
-                        : cardStatus === "ready"
+                      {cardStatus === "ready"
                         ? t.cardLocked
                         : autoCountdown
                           ? `${t.holdStill} ${autoCountdown}`
@@ -1598,8 +1540,8 @@ useEffect(() => {
                     </button>
                   </>
                 ) : cameraActive ? (
-                  <button className="btn-action btn-tdk" onClick={() => takeSnapshot()} disabled={!manualCaptureUnlocked && cardStatus !== "ready"}>
-                    {manualCaptureUnlocked || cardStatus === "ready" ? t.takePhoto : cardMessage || t.detectingCard}
+                  <button className="btn-action btn-tdk" onClick={takeSnapshot} disabled={cameraStatus !== "ready"}>
+                    {cameraStatus === "ready" ? t.takePhoto : t.cameraStarting}
                   </button>
                 ) : (
                   <>
