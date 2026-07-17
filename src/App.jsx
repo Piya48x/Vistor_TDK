@@ -24,9 +24,8 @@ const translations = {
     manualCaptureReady: "ถ่ายเองได้แล้ว",
     cameraFallback: "ถ่ายผ่านกล้องของมือถือ",
     cameraUnsupportedTitle: "กล้องยังเปิดไม่ได้",
-    cameraUnsupportedText: "เบราว์เซอร์นี้อาจไม่อนุญาตให้เว็บเข้าถึงกล้องโดยตรง กรุณาใช้ปุ่มถ่ายผ่านกล้องของมือถือ หรือเปิดใน Chrome",
+    cameraUnsupportedText: "เบราว์เซอร์นี้อาจไม่อนุญาตให้เว็บเข้าถึงกล้องโดยตรง กรุณาใช้ปุ่มถ่ายผ่านกล้องของมือถือ",
     cameraPermissionError: "กรุณาอนุญาตการใช้งานกล้อง แล้วลองอีกครั้ง",
-    openChrome: "เปิดใน Chrome",
     takePhoto: "📸 ถ่ายภาพเอกสาร",
     usePhoto: "ใช้รูปนี้และกรอกข้อมูล ➔",
     retakePhoto: "ถ่ายภาพใหม่อีกครั้ง",
@@ -86,9 +85,8 @@ const translations = {
     manualCaptureReady: "Manual capture is available",
     cameraFallback: "Use Phone Camera",
     cameraUnsupportedTitle: "Camera is not available",
-    cameraUnsupportedText: "This browser may not allow direct camera access. Use the phone camera button or open this page in Chrome.",
+    cameraUnsupportedText: "This browser may not allow direct camera access. Use the phone camera button.",
     cameraPermissionError: "Please allow camera access and try again",
-    openChrome: "Open in Chrome",
     takePhoto: "📸 Take Photo",
     usePhoto: "Use This Photo & Fill Info ➔",
     retakePhoto: "Retake Photo",
@@ -148,9 +146,8 @@ const translations = {
     manualCaptureReady: "직접 촬영할 수 있습니다",
     cameraFallback: "휴대폰 카메라 사용",
     cameraUnsupportedTitle: "카메라를 열 수 없습니다",
-    cameraUnsupportedText: "이 브라우저에서는 카메라 접근이 제한될 수 있습니다. 휴대폰 카메라 버튼을 사용하거나 Chrome에서 열어 주세요.",
+    cameraUnsupportedText: "이 브라우저에서는 카메라 접근이 제한될 수 있습니다. 휴대폰 카메라 버튼을 사용해 주세요.",
     cameraPermissionError: "카메라 접근을 허용한 후 다시 시도해 주세요",
-    openChrome: "Chrome에서 열기",
     takePhoto: "📸 사진 촬영",
     usePhoto: "이 사진 사용 및 정보 입력 ➔",
     retakePhoto: "사진 다시 찍기",
@@ -471,7 +468,6 @@ export default function App() {
   const analysisCanvasRef = useRef(null);
   const cardReadySinceRef = useRef(null);
   const captureLockedRef = useRef(false);
-  const isLineBrowser = /Line\//i.test(navigator.userAgent);
 
   const handleLanguageChange = (lang) => {
   setLanguage(lang);
@@ -694,19 +690,6 @@ useEffect(() => {
     };
     reader.readAsDataURL(file);
     event.target.value = "";
-  };
-
-  const openInChrome = () => {
-    const currentUrl = window.location.href;
-    const withoutProtocol = currentUrl.replace(/^https?:\/\//, "");
-    const scheme = window.location.protocol.replace(":", "");
-
-    if (/Android/i.test(navigator.userAgent)) {
-      window.location.href = `intent://${withoutProtocol}#Intent;scheme=${scheme};package=com.android.chrome;end`;
-      return;
-    }
-
-    window.location.href = currentUrl.replace(/^https:\/\//, "googlechromes://").replace(/^http:\/\//, "googlechrome://");
   };
 
   const handleSubmit = async (e) => {
@@ -1510,12 +1493,6 @@ useEffect(() => {
                 {t.step1Guide}
               </p>
 
-              {!photoDataUrl && isLineBrowser && (
-                <div className="camera-help">
-                  LINE อาจจำกัดการเปิดกล้องโดยตรง ถ้ากล้องไม่ขึ้นให้กด “{t.cameraFallback}” หรือ “{t.openChrome}”
-                </div>
-              )}
-
               {cameraError && (
                 <div className="camera-help camera-error">
                   <strong>{t.cameraUnsupportedTitle}</strong><br />
@@ -1558,11 +1535,6 @@ useEffect(() => {
                     >
                       {t.cameraFallback}
                     </button>
-                    {(isLineBrowser || cameraError) && (
-                      <button className="btn-action btn-ghost" onClick={openInChrome}>
-                        {t.openChrome}
-                      </button>
-                    )}
                   </>
                 )}
               </div>
