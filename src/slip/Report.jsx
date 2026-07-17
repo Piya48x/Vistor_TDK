@@ -29,7 +29,8 @@ import {
   Sun,
   Moon,
   TrendingUp,
-  UserCheck
+  UserCheck,
+  Eye
 } from "lucide-react";
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "../supabaseClient";
@@ -161,8 +162,13 @@ function calculateDurationMinutes(checkin, checkout) {
   return Math.max(0, Math.floor((end - start) / 60000));
 }
 
+function getVisitorPhoto(visitor) {
+  return visitor?.visitor_image || visitor?.photo_url || "";
+}
+
 export default function Report() {
   const [visitors, setVisitors] = useState([]);
+  const [checkoutQueue, setCheckoutQueue] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [searchStart, setSearchStart] = useState("");
@@ -179,6 +185,7 @@ export default function Report() {
   const [editForm, setEditForm] = useState({});
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState(null);
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
@@ -252,6 +259,17 @@ export default function Report() {
     },
     [activeFilter, searchStart, searchEnd, searchName]
   );
+
+  const loadCheckoutQueue = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("visitors")
+      .select("*")
+      .is("checkout_time", null)
+      .order("checkin_time", { ascending: true })
+      .limit(6);
+
+    if (!error) setCheckoutQueue(data || []);
+  }, []);
 
   const handleViewImage = (imgSrc) => {
     MySwal.fire({
@@ -328,8 +346,9 @@ export default function Report() {
     } else {
       loadVisitors("TODAY");
       loadSummary();
+      loadCheckoutQueue();
     }
-  }, [navigate, loadVisitors]);
+  }, [navigate, loadVisitors, loadCheckoutQueue]);
 
   // ค้นหาส่วนนี้ในไฟล์ Report.jsx
   useEffect(() => {
@@ -341,6 +360,7 @@ export default function Report() {
         (payload) => {
           loadSummary();
           loadVisitors(activeFilter);
+          loadCheckoutQueue();
 
           // --- ส่วนที่ต้องมั่นใจว่ามี เพื่อให้หน้าสลิปเด้งขึ้นมาอัตโนมัติ ---
           // ใน Report.jsx
@@ -355,7 +375,7 @@ export default function Report() {
       )
       .subscribe();
     return () => supabase.removeChannel(channel);
-  }, [activeFilter, loadVisitors]);
+  }, [activeFilter, loadVisitors, loadCheckoutQueue]);
 
   const handleCheckOut = async (id) => {
     await supabase
@@ -364,6 +384,7 @@ export default function Report() {
       .eq("id", id);
     loadSummary();
     loadVisitors(activeFilter);
+    loadCheckoutQueue();
   };
 
   const deleteSelected = async () => {
@@ -372,6 +393,7 @@ export default function Report() {
       setSelectedIds([]);
       loadSummary();
       loadVisitors(activeFilter);
+      loadCheckoutQueue();
     }
   };
 
@@ -397,6 +419,7 @@ export default function Report() {
       setEditingId(null);
       loadSummary();
       loadVisitors(activeFilter);
+      loadCheckoutQueue();
     }
   };
 
@@ -598,9 +621,8 @@ export default function Report() {
     });
   };
 
-  const currentVisitors = visitors.filter((v) => !v.checkout_time);
   const completedVisitors = visitors.filter((v) => v.checkout_time);
-  const priorityCheckoutList = [...currentVisitors]
+  const priorityCheckoutList = [...checkoutQueue]
     .sort(
       (a, b) =>
         calculateDurationMinutes(b.checkin_time) -
@@ -1041,6 +1063,59 @@ export default function Report() {
                 </div>
               )}
             </div>
+
+            {activeFilter === "CHECKOUT_TODAY" && (
+              <div className="mt-6 border-t border-slate-200 pt-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="flex items-center gap-2 text-sm font-black text-emerald-700">
+                      <CheckCircle size={16} />
+                      เช็คเอ้าท์แล้ววันนี้
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-slate-500">
+                      รายชื่อจากตัวกรองเช็คเอ้าท์วันนี้
+                    </p>
+                  </div>
+                  <span className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-black text-emerald-700">
+                    {completedVisitors.length}
+                  </span>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  {completedVisitors.length ? (
+                    completedVisitors.slice(0, 6).map((v) => (
+                      <div
+                        key={`completed-${v.id}`}
+                        className="rounded-lg border border-emerald-100 bg-emerald-50/60 p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-base font-black text-slate-900">
+                              {v.full_name || "ไม่ระบุชื่อ"}
+                            </p>
+                            <p className="truncate text-sm font-semibold text-slate-500">
+                              {v.company || "ทั่วไป"} · {v.contact_person || "ไม่ระบุผู้ติดต่อ"}
+                            </p>
+                          </div>
+                          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-2 text-xs font-black text-white">
+                            <CheckCircle size={14} />
+                            ออกแล้ว
+                          </span>
+                        </div>
+                        <p className="mt-3 inline-flex items-center gap-2 rounded-md bg-white px-2 py-1 text-xs font-bold text-emerald-700">
+                          <Clock size={13} />
+                          {formatDateTime(v.checkout_time)}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm font-bold text-slate-400">
+                      ยังไม่มีผู้เช็คเอ้าท์วันนี้
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </aside>
         </div>
 
@@ -1320,6 +1395,25 @@ export default function Report() {
                           </button>
                         )}
                         <button
+                          onClick={() =>
+                            setPhotoPreview({
+                              src: getVisitorPhoto(v),
+                              name: v.full_name || "ผู้มาติดต่อ",
+                              id: v.id,
+                            })
+                          }
+                          disabled={!getVisitorPhoto(v)}
+                          className={`p-2.5 border rounded-lg transition-colors ${
+                            getVisitorPhoto(v)
+                              ? "bg-white border-slate-200 text-sky-600 hover:bg-sky-50 hover:border-sky-200"
+                              : "bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed"
+                          }`}
+                          title={getVisitorPhoto(v) ? "ดูรูปบัตร" : "ไม่มีรูปบัตร"}
+                          aria-label={getVisitorPhoto(v) ? `ดูรูปบัตรของ ${v.full_name || "ผู้มาติดต่อ"}` : "ไม่มีรูปบัตร"}
+                        >
+                          <Eye size={18} />
+                        </button>
+                        <button
                           onClick={() => openEdit(v)}
                           className="p-2.5 bg-white border border-slate-200 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors"
                           title="แก้ไข"
@@ -1344,6 +1438,7 @@ export default function Report() {
                                 .eq("id", v.id);
                               loadVisitors();
                               loadSummary();
+                              loadCheckoutQueue();
                             }
                           }}
                           className="p-2.5 bg-white border border-slate-200 text-rose-500 rounded-lg hover:bg-rose-50 transition-colors"
@@ -1373,6 +1468,48 @@ export default function Report() {
           </div>
         </div>
       </div>
+      {photoPreview && (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`รูปบัตรของ ${photoPreview.name}`}
+          onClick={() => setPhotoPreview(null)}
+        >
+          <div
+            className="w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-sky-600">
+                  <Maximize2 size={15} />
+                  รูปบัตรผู้มาติดต่อ
+                </div>
+                <p className="mt-1 truncate text-lg font-black text-slate-900">
+                  {photoPreview.name} <span className="text-slate-400">#{photoPreview.id}</span>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPhotoPreview(null)}
+                className="rounded-full p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+                title="ปิด"
+                aria-label="ปิดรูปบัตร"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="flex max-h-[80vh] items-center justify-center bg-slate-100 p-4 sm:p-6">
+              <img
+                src={photoPreview.src}
+                alt={`รูปบัตรของ ${photoPreview.name}`}
+                className="max-h-[70vh] max-w-full rounded-xl object-contain shadow-lg"
+              />
+            </div>
+          </div>
+        </div>
+      )}
       {editingId && (
         <div className="fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-[2.5rem] w-full max-w-2xl shadow-2xl overflow-hidden">
