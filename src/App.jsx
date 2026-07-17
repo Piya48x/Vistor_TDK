@@ -24,8 +24,9 @@ const translations = {
     manualCaptureReady: "ถ่ายเองได้แล้ว",
     cameraFallback: "ถ่ายผ่านกล้องของมือถือ",
     cameraUnsupportedTitle: "กล้องยังเปิดไม่ได้",
-    cameraUnsupportedText: "เบราว์เซอร์นี้อาจไม่อนุญาตให้เว็บเข้าถึงกล้องโดยตรง กรุณาใช้ปุ่มถ่ายผ่านกล้องของมือถือ",
+    cameraUnsupportedText: "เบราว์เซอร์นี้อาจไม่อนุญาตให้เว็บเข้าถึงกล้องโดยตรง กรุณาใช้ปุ่มถ่ายผ่านกล้องของมือถือ หรือเปิดใน Chrome",
     cameraPermissionError: "กรุณาอนุญาตการใช้งานกล้อง แล้วลองอีกครั้ง",
+    openChrome: "เปิดใน Chrome",
     takePhoto: "📸 ถ่ายภาพเอกสาร",
     usePhoto: "ใช้รูปนี้และกรอกข้อมูล ➔",
     retakePhoto: "ถ่ายภาพใหม่อีกครั้ง",
@@ -85,8 +86,9 @@ const translations = {
     manualCaptureReady: "Manual capture is available",
     cameraFallback: "Use Phone Camera",
     cameraUnsupportedTitle: "Camera is not available",
-    cameraUnsupportedText: "This browser may not allow direct camera access. Use the phone camera button.",
+    cameraUnsupportedText: "This browser may not allow direct camera access. Use the phone camera button or open this page in Chrome.",
     cameraPermissionError: "Please allow camera access and try again",
+    openChrome: "Open in Chrome",
     takePhoto: "📸 Take Photo",
     usePhoto: "Use This Photo & Fill Info ➔",
     retakePhoto: "Retake Photo",
@@ -146,8 +148,9 @@ const translations = {
     manualCaptureReady: "직접 촬영할 수 있습니다",
     cameraFallback: "휴대폰 카메라 사용",
     cameraUnsupportedTitle: "카메라를 열 수 없습니다",
-    cameraUnsupportedText: "이 브라우저에서는 카메라 접근이 제한될 수 있습니다. 휴대폰 카메라 버튼을 사용해 주세요.",
+    cameraUnsupportedText: "이 브라우저에서는 카메라 접근이 제한될 수 있습니다. 휴대폰 카메라 버튼을 사용하거나 Chrome에서 열어 주세요.",
     cameraPermissionError: "카메라 접근을 허용한 후 다시 시도해 주세요",
+    openChrome: "Chrome에서 열기",
     takePhoto: "📸 사진 촬영",
     usePhoto: "이 사진 사용 및 정보 입력 ➔",
     retakePhoto: "사진 다시 찍기",
@@ -439,6 +442,9 @@ export default function App() {
   const [language, setLanguage] = useState("th"); // 'th', 'en', 'ko'
   const t = translations[language];
   const [isLangOpen, setIsLangOpen] = useState(false);
+  const userAgent = typeof navigator === "undefined" ? "" : navigator.userAgent;
+  const isLineBrowser = /Line\//i.test(userAgent);
+  const prefersNativeCamera = isLineBrowser || /Android|iPhone|iPad|iPod/i.test(userAgent);
 
   
 
@@ -511,6 +517,11 @@ useEffect(() => {
   }, [step]);
 
   const startCamera = async () => {
+    if (prefersNativeCamera) {
+      openNativeCamera();
+      return;
+    }
+
     resetCardDetection();
     setPhotoDataUrl("");
     setCameraError("");
@@ -594,6 +605,43 @@ useEffect(() => {
     captureLockedRef.current = false;
     setCardStatus("idle");
     setCardMessage("");
+  };
+
+  const openNativeCamera = () => {
+    resetCardDetection();
+    stopCamera();
+    setCameraActive(false);
+    setCameraStatus("idle");
+    setCameraError("");
+
+    const input = fileInputRef.current;
+    if (!input) return;
+
+    try {
+      if (typeof input.showPicker === "function") {
+        input.showPicker();
+        return;
+      }
+    } catch {
+      // Some in-app browsers expose showPicker but still block it.
+    }
+
+    input.click();
+  };
+
+  const openInChrome = () => {
+    const currentUrl = window.location.href;
+    const withoutProtocol = currentUrl.replace(/^https?:\/\//, "");
+    const scheme = window.location.protocol.replace(":", "") || "https";
+
+    if (/Android/i.test(userAgent)) {
+      window.location.href = `intent://${withoutProtocol}#Intent;scheme=${scheme};package=com.android.chrome;end`;
+      return;
+    }
+
+    window.location.href = currentUrl
+      .replace(/^https:\/\//, "googlechromes://")
+      .replace(/^http:\/\//, "googlechrome://");
   };
 
   const startAutoCapture = (remainingMs) => {
@@ -1468,8 +1516,12 @@ useEffect(() => {
                 ) : (
                   <div className="camera-placeholder">
                     <div className="camera-placeholder-icon">▣</div>
-                    <div className="camera-placeholder-title">{t.openCamera}</div>
-                    <p className="camera-placeholder-text">{t.autoCaptureHint}</p>
+                    <div className="camera-placeholder-title">
+                      {prefersNativeCamera ? t.cameraFallback : t.openCamera}
+                    </div>
+                    <p className="camera-placeholder-text">
+                      {prefersNativeCamera ? t.step1Guide : t.autoCaptureHint}
+                    </p>
                   </div>
                 )}
               </div>
@@ -1511,7 +1563,7 @@ useEffect(() => {
                     </button>
                     <button
                       className="btn-action btn-ghost"
-                      onClick={startCamera}
+                      onClick={prefersNativeCamera ? openNativeCamera : startCamera}
                     >
                       {t.retakePhoto}
                     </button>
@@ -1521,21 +1573,48 @@ useEffect(() => {
                     {cameraStatus === "ready" ? t.takePhoto : t.cameraStarting}
                   </button>
                 ) : (
-                  <>
-                    <button
-                      className="btn-action btn-tdk"
-                      onClick={startCamera}
-                      disabled={cameraStatus === "starting"}
-                    >
-                      {cameraStatus === "starting" ? t.cameraStarting : t.openCamera}
-                    </button>
-                    <button
-                      className="btn-action btn-secondary"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      {t.cameraFallback}
-                    </button>
-                  </>
+                  prefersNativeCamera ? (
+                    <>
+                      <button
+                        className="btn-action btn-tdk"
+                        onClick={openNativeCamera}
+                      >
+                        {t.cameraFallback}
+                      </button>
+                      {(isLineBrowser || cameraError) && (
+                        <button
+                          className="btn-action btn-ghost"
+                          onClick={openInChrome}
+                        >
+                          {t.openChrome}
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        className="btn-action btn-tdk"
+                        onClick={startCamera}
+                        disabled={cameraStatus === "starting"}
+                      >
+                        {cameraStatus === "starting" ? t.cameraStarting : t.openCamera}
+                      </button>
+                      <button
+                        className="btn-action btn-secondary"
+                        onClick={openNativeCamera}
+                      >
+                        {t.cameraFallback}
+                      </button>
+                      {cameraError && (
+                        <button
+                          className="btn-action btn-ghost"
+                          onClick={openInChrome}
+                        >
+                          {t.openChrome}
+                        </button>
+                      )}
+                    </>
+                  )
                 )}
               </div>
             </div>
