@@ -41,34 +41,65 @@ import bgImage from "../img/g.jpg";
 const USERNAME = "1234";
 const PASSWORD = "1234";
 const ORG = import.meta.env.VITE_ORG_NAME || "TDK INDUSTRIAL";
+const THAI_TIME_ZONE = "Asia/Bangkok";
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) =>
+  String(hour).padStart(2, "0")
+);
+const MINUTE_OPTIONS = Array.from({ length: 60 }, (_, minute) =>
+  String(minute).padStart(2, "0")
+);
 
 // --- Helpers ---
 const dateFormatter = new Intl.DateTimeFormat("th-TH", {
+  timeZone: THAI_TIME_ZONE,
   year: "numeric",
   month: "2-digit",
   day: "2-digit",
   hour: "2-digit",
   minute: "2-digit",
   second: "2-digit",
-  hour12: false,
+  hourCycle: "h23",
 });
 
-function toLocalDatetimeInput(isoString) {
-  if (!isoString) return "";
-  const d = new Date(isoString);
-  const pad = (n) => String(n).padStart(2, "0");
+const thailandInputFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: THAI_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
 
-  return (
-    d.getFullYear() +
-    "-" +
-    pad(d.getMonth() + 1) +
-    "-" +
-    pad(d.getDate()) +
-    "T" +
-    pad(d.getHours()) +
-    ":" +
-    pad(d.getMinutes())
+function toThailandDateTimeParts(isoString) {
+  if (!isoString) return { date: "", hour: "00", minute: "00" };
+
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) {
+    return { date: "", hour: "00", minute: "00" };
+  }
+
+  const parts = Object.fromEntries(
+    thailandInputFormatter
+      .formatToParts(date)
+      .filter(({ type }) => type !== "literal")
+      .map(({ type, value }) => [type, value])
   );
+
+  return {
+    date: `${parts.year}-${parts.month}-${parts.day}`,
+    hour: parts.hour,
+    minute: parts.minute,
+  };
+}
+
+function thailandDateTimeToIso(date, hour, minute) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date || "")) return null;
+  if (!/^(?:[01]\d|2[0-3])$/.test(hour || "")) return null;
+  if (!/^[0-5]\d$/.test(minute || "")) return null;
+
+  const value = new Date(`${date}T${hour}:${minute}:00+07:00`);
+  return Number.isNaN(value.getTime()) ? null : value.toISOString();
 }
 
 const PURPOSE_TH = {
@@ -86,20 +117,11 @@ const PURPOSE_TH = {
   management: "ติดต่อผู้บริหาร",
   visit: "เข้าเยี่ยมชมบริษัท",
   emergency: "กรณีฉุกเฉิน",
+  interview: "สมัครงาน / สัมภาษณ์",
+  billing: "วางบิล / รับเช็ค",
   other: "อื่น ๆ",
 };
 
-function normalizePurpose(purpose) {
-  if (!purpose) return "";
-
-  // ถ้าเป็น key ใหม่ (อังกฤษ)
-  if (PURPOSE_TH[purpose]) return purpose;
-
-  // ถ้าเป็นภาษาไทย → map กลับ
-  const found = Object.entries(PURPOSE_TH).find(([_, th]) => th === purpose);
-
-  return found ? found[0] : "other";
-}
 const PURPOSES = [
   { value: "meeting", label: "ประชุมงาน" },
   { value: "delivery", label: "ส่งของ / รับของ" },
@@ -115,23 +137,83 @@ const PURPOSES = [
   { value: "management", label: "ติดต่อผู้บริหาร" },
   { value: "visit", label: "เข้าเยี่ยมชมบริษัท" },
   { value: "emergency", label: "กรณีฉุกเฉิน" },
+  { value: "interview", label: "สมัครงาน / สัมภาษณ์" },
+  { value: "billing", label: "วางบิล / รับเช็ค" },
   { value: "other", label: "อื่น ๆ" },
 ];
 
+const PURPOSE_ALIASES = {
+  meeting: ["meeting", "ประชุม"],
+  delivery: ["delivery", "ส่งสินค้า", "รับสินค้า", "ส่งของ", "รับของ"],
+  maintenance: ["maintenance", "ซ่อมบำรุง", "ติดตั้ง"],
+  it_support: ["it support", "ปัญหา it"],
+  system_install: ["system install", "ติดตั้งระบบ", "โปรแกรม"],
+  training: ["training", "อบรม", "สอนงาน"],
+  audit: ["audit", "ตรวจสอบ"],
+  inspection: ["inspection", "ตรวจงาน", "ตรวจรับ"],
+  sales: ["sales", "นำเสนอขาย", "เสนอราคา"],
+  purchase: ["purchase", "จัดซื้อ"],
+  hr: ["human resource", "ฝ่ายบุคคล"],
+  management: ["management", "ผู้บริหาร"],
+  visit: ["visit", "เยี่ยมชม"],
+  emergency: ["emergency", "ฉุกเฉิน"],
+  interview: ["interview", "สมัครงาน", "สัมภาษณ์"],
+  billing: ["billing", "วางบิล", "รับเช็ค"],
+};
+
+function parsePurpose(purpose, otherPurpose = "") {
+  const rawPurpose = String(purpose || "").trim();
+  const rawOtherPurpose = String(otherPurpose || "").trim();
+  const normalized = rawPurpose.toLowerCase();
+
+  if (!rawPurpose) return { key: "", other: rawOtherPurpose };
+  if (PURPOSE_TH[rawPurpose]) {
+    return {
+      key: rawPurpose,
+      other: rawPurpose === "other" ? rawOtherPurpose : "",
+    };
+  }
+
+  if (
+    normalized === "other" ||
+    normalized.includes("(other)") ||
+    rawPurpose.startsWith("อื่น")
+  ) {
+    const detailFromPurpose = rawPurpose.includes(":")
+      ? rawPurpose.split(":").slice(1).join(":").trim()
+      : "";
+    return { key: "other", other: rawOtherPurpose || detailFromPurpose };
+  }
+
+  const exactThai = Object.entries(PURPOSE_TH).find(
+    ([, thaiLabel]) => thaiLabel === rawPurpose
+  );
+  if (exactThai) return { key: exactThai[0], other: "" };
+
+  const alias = Object.entries(PURPOSE_ALIASES).find(([, keywords]) =>
+    keywords.some((keyword) => normalized.includes(keyword.toLowerCase()))
+  );
+  if (alias) return { key: alias[0], other: "" };
+
+  return { key: "other", other: rawOtherPurpose || rawPurpose };
+}
+
+function buildStoredPurpose(purpose, otherPurpose) {
+  if (purpose !== "other") return purpose;
+  const detail = String(otherPurpose || "").trim();
+  return detail ? `อื่น ๆ: ${detail}` : "other";
+}
+
 const translatePurpose = (purpose, other_purpose) => {
-  if (purpose === "other") return other_purpose || "อื่น ๆ";
-  return PURPOSE_TH[purpose] || purpose;
+  const parsed = parsePurpose(purpose, other_purpose);
+  if (parsed.key === "other") return parsed.other || "อื่น ๆ";
+  return PURPOSE_TH[parsed.key] || purpose;
 };
 
 function formatDateTime(isoString) {
   if (!isoString) return "";
-  return dateFormatter.format(new Date(isoString));
-}
-
-function formatForInput(isoString) {
-  if (!isoString) return "";
-  const d = new Date(isoString);
-  return d.toISOString().slice(0, 19);
+  const date = new Date(isoString);
+  return Number.isNaN(date.getTime()) ? "" : dateFormatter.format(date);
 }
 
 function calculateDuration(checkin, checkout) {
@@ -174,6 +256,8 @@ export default function Report() {
   });
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editError, setEditError] = useState("");
   const [isDarkMode, setIsDarkMode] = useState(
     () => localStorage.getItem("report-theme") === "dark"
   );
@@ -467,28 +551,78 @@ export default function Report() {
   };
 
   const saveEdit = async () => {
-    const { error } = await supabase
-      .from("visitors")
-      .update({
-        full_name: editForm.full_name,
-        company: editForm.company,
-        contact_person: editForm.contact_person,
-        purpose: editForm.purpose, // ส่วนนี้รองรับอยู่แล้ว
-        other_purpose: editForm.other_purpose, // ส่วนนี้รองรับอยู่แล้ว
-        checkin_time: editForm.checkin_time
-          ? new Date(editForm.checkin_time).toISOString()
-          : null,
-        checkout_time: editForm.checkout_time
-          ? new Date(editForm.checkout_time).toISOString()
-          : null,
-      })
-      .eq("id", editingId);
+    setEditError("");
 
-    if (!error) {
+    const fullName = String(editForm.full_name || "").trim();
+    const checkinTime = thailandDateTimeToIso(
+      editForm.checkin_date,
+      editForm.checkin_hour,
+      editForm.checkin_minute
+    );
+    const checkoutTime = editForm.has_checkout
+      ? thailandDateTimeToIso(
+          editForm.checkout_date,
+          editForm.checkout_hour,
+          editForm.checkout_minute
+        )
+      : null;
+
+    if (!fullName) {
+      setEditError("กรุณากรอกชื่อ-นามสกุล");
+      return;
+    }
+    if (!checkinTime) {
+      setEditError("กรุณาระบุวันที่และเวลาเข้าให้ถูกต้อง");
+      return;
+    }
+    if (editForm.has_checkout && !checkoutTime) {
+      setEditError("กรุณาระบุวันที่และเวลาออกให้ถูกต้อง");
+      return;
+    }
+    if (checkoutTime && new Date(checkoutTime) < new Date(checkinTime)) {
+      setEditError("เวลาออกต้องไม่น้อยกว่าเวลาเข้า");
+      return;
+    }
+    if (editForm.purpose === "other" && !String(editForm.other_purpose || "").trim()) {
+      setEditError("กรุณาระบุวัตถุประสงค์อื่น ๆ");
+      return;
+    }
+
+    setIsSavingEdit(true);
+    try {
+      const { data, error } = await supabase
+        .from("visitors")
+        .update({
+          full_name: fullName,
+          company: String(editForm.company || "").trim(),
+          phone: String(editForm.phone || "").trim(),
+          contact_person: String(editForm.contact_person || "").trim(),
+          purpose: buildStoredPurpose(
+            editForm.purpose,
+            editForm.other_purpose
+          ),
+          checkin_time: checkinTime,
+          checkout_time: checkoutTime,
+        })
+        .eq("id", editingId)
+        .select("*")
+        .single();
+
+      if (error) throw error;
+
+      setVisitors((current) =>
+        current.map((visitor) => (visitor.id === editingId ? data : visitor))
+      );
       setEditingId(null);
-      loadSummary();
-      loadVisitors(activeFilter);
-      loadCheckoutQueue();
+      await Promise.all([
+        loadSummary(),
+        loadVisitors(activeFilter),
+        loadCheckoutQueue(),
+      ]);
+    } catch (error) {
+      setEditError(`บันทึกไม่สำเร็จ: ${error.message || "กรุณาลองใหม่"}`);
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -681,13 +815,35 @@ export default function Report() {
   };
 
   const openEdit = (v) => {
+    const purpose = parsePurpose(v.purpose, v.other_purpose);
+    const checkin = toThailandDateTimeParts(v.checkin_time);
+    const checkout = toThailandDateTimeParts(v.checkout_time);
+
+    setEditError("");
     setEditingId(v.id);
     setEditForm({
       ...v,
-      purpose: normalizePurpose(v.purpose),
-      checkin_time: toLocalDatetimeInput(v.checkin_time),
-      checkout_time: v.checkout_time ? toLocalDatetimeInput(v.checkout_time) : "",
+      purpose: purpose.key,
+      other_purpose: purpose.other,
+      checkin_date: checkin.date,
+      checkin_hour: checkin.hour,
+      checkin_minute: checkin.minute,
+      has_checkout: Boolean(v.checkout_time),
+      checkout_date: checkout.date,
+      checkout_hour: checkout.hour,
+      checkout_minute: checkout.minute,
     });
+  };
+
+  const setEditCheckoutEnabled = (enabled) => {
+    const now = toThailandDateTimeParts(new Date().toISOString());
+    setEditForm((current) => ({
+      ...current,
+      has_checkout: enabled,
+      checkout_date: enabled ? current.checkout_date || now.date : "",
+      checkout_hour: enabled ? current.checkout_hour || now.hour : "00",
+      checkout_minute: enabled ? current.checkout_minute || now.minute : "00",
+    }));
   };
 
   const completedVisitors = visitors.filter((v) => v.checkout_time);
@@ -1622,6 +1778,11 @@ export default function Report() {
                           <UserCircle size={14} /> ติดต่อ:{" "}
                           {v.contact_person || "ไม่ระบุ"}
                         </div>
+                        {v.phone && (
+                          <div className="pl-1 text-sm font-medium text-[#5f7394]">
+                            โทร: {v.phone}
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-5 py-4">
@@ -1826,7 +1987,10 @@ export default function Report() {
                   className="w-full rounded-2xl border-2 border-[#d8e4f7] bg-[#f7faff] p-4 text-base outline-none focus:border-[#003399] focus:bg-white focus:ring-4 focus:ring-blue-100"
                   value={editForm.full_name || ""}
                   onChange={(e) =>
-                    setEditForm({ ...editForm, full_name: e.target.value })
+                    setEditForm((current) => ({
+                      ...current,
+                      full_name: e.target.value,
+                    }))
                   }
                 />
               </div>
@@ -1839,7 +2003,27 @@ export default function Report() {
                   className="w-full rounded-2xl border-2 border-[#d8e4f7] bg-[#f7faff] p-4 text-base outline-none focus:border-[#003399] focus:bg-white focus:ring-4 focus:ring-blue-100"
                   value={editForm.company || ""}
                   onChange={(e) =>
-                    setEditForm({ ...editForm, company: e.target.value })
+                    setEditForm((current) => ({
+                      ...current,
+                      company: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-500 mb-1">
+                  เบอร์โทรศัพท์
+                </label>
+                <input
+                  type="tel"
+                  inputMode="tel"
+                  className="w-full rounded-2xl border-2 border-[#d8e4f7] bg-[#f7faff] p-4 text-base outline-none focus:border-[#003399] focus:bg-white focus:ring-4 focus:ring-blue-100"
+                  value={editForm.phone || ""}
+                  onChange={(e) =>
+                    setEditForm((current) => ({
+                      ...current,
+                      phone: e.target.value,
+                    }))
                   }
                 />
               </div>
@@ -1852,7 +2036,10 @@ export default function Report() {
                   className="w-full rounded-2xl border-2 border-[#d8e4f7] bg-[#f7faff] p-4 text-base outline-none focus:border-[#003399] focus:bg-white focus:ring-4 focus:ring-blue-100"
                   value={editForm.contact_person || ""}
                   onChange={(e) =>
-                    setEditForm({ ...editForm, contact_person: e.target.value })
+                    setEditForm((current) => ({
+                      ...current,
+                      contact_person: e.target.value,
+                    }))
                   }
                 />
               </div>
@@ -1866,14 +2053,14 @@ export default function Report() {
                     className="w-full rounded-2xl border-2 border-[#d8e4f7] bg-[#f7faff] p-4 text-base outline-none focus:border-[#003399] focus:bg-white focus:ring-4 focus:ring-blue-100"
                     value={editForm.purpose || ""}
                     onChange={(e) =>
-                      setEditForm({
-                        ...editForm,
+                      setEditForm((current) => ({
+                        ...current,
                         purpose: e.target.value,
                         other_purpose:
                           e.target.value === "other"
-                            ? editForm.other_purpose
+                            ? current.other_purpose
                             : "",
-                      })
+                      }))
                     }
                   >
                     <option value="">เลือกวัตถุประสงค์</option>
@@ -1896,60 +2083,170 @@ export default function Report() {
                       className="w-full rounded-2xl border-2 border-[#d8e4f7] bg-[#f7faff] p-4 text-base outline-none focus:border-[#003399] focus:bg-white focus:ring-4 focus:ring-blue-100"
                       value={editForm.other_purpose || ""}
                       onChange={(e) =>
-                        setEditForm({
-                          ...editForm,
+                        setEditForm((current) => ({
+                          ...current,
                           other_purpose: e.target.value,
-                        })
+                        }))
                       }
                     />
                   </div>
                 )}
               </div>
-              {/* เพิ่มต่อจากช่อง บุคคลที่มาติดต่อ ใน Modal */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] font-black text-slate-400 uppercase mb-1">
-                    แก้ไขเวลาเข้า
+                <div className="rounded-2xl border-2 border-[#d8e4f7] bg-[#f7faff] p-4">
+                  <label className="mb-3 block text-sm font-bold text-slate-600">
+                    วันที่และเวลาเข้า
                   </label>
-                  <input
-                    type="datetime-local"
-                    className="w-full rounded-2xl border-2 border-[#d8e4f7] bg-[#f7faff] p-4 text-base outline-none focus:border-[#003399] focus:bg-white focus:ring-4 focus:ring-blue-100"
-                    value={editForm.checkin_time || ""}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, checkin_time: e.target.value })
-                    }
-                  />
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
+                    <input
+                      type="date"
+                      lang="th-TH"
+                      className="min-w-0 rounded-xl border border-[#cbdcff] bg-white px-3 py-3 text-base outline-none focus:border-[#003399] focus:ring-4 focus:ring-blue-100"
+                      value={editForm.checkin_date || ""}
+                      onChange={(e) =>
+                        setEditForm((current) => ({
+                          ...current,
+                          checkin_date: e.target.value,
+                        }))
+                      }
+                    />
+                    <div className="flex items-center gap-2">
+                      <select
+                        aria-label="ชั่วโมงเข้าแบบ 24 ชั่วโมง"
+                        className="rounded-xl border border-[#cbdcff] bg-white px-3 py-3 text-base font-semibold outline-none focus:border-[#003399] focus:ring-4 focus:ring-blue-100"
+                        value={editForm.checkin_hour || "00"}
+                        onChange={(e) =>
+                          setEditForm((current) => ({
+                            ...current,
+                            checkin_hour: e.target.value,
+                          }))
+                        }
+                      >
+                        {HOUR_OPTIONS.map((hour) => (
+                          <option key={hour} value={hour}>{hour}</option>
+                        ))}
+                      </select>
+                      <span className="text-lg font-bold text-slate-500">:</span>
+                      <select
+                        aria-label="นาทีเข้า"
+                        className="rounded-xl border border-[#cbdcff] bg-white px-3 py-3 text-base font-semibold outline-none focus:border-[#003399] focus:ring-4 focus:ring-blue-100"
+                        value={editForm.checkin_minute || "00"}
+                        onChange={(e) =>
+                          setEditForm((current) => ({
+                            ...current,
+                            checkin_minute: e.target.value,
+                          }))
+                        }
+                      >
+                        {MINUTE_OPTIONS.map((minute) => (
+                          <option key={minute} value={minute}>{minute}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-xs font-medium text-[#5071a5]">
+                    เวลาไทย 24 ชั่วโมง (UTC+7)
+                  </p>
                 </div>
-                <div>
-                  <label className="block text-[11px] font-black text-slate-400 uppercase mb-1">
-                    แก้ไขเวลาออก
-                  </label>
-                  <input
-                    type="datetime-local"
-                    className="w-full rounded-2xl border-2 border-[#d8e4f7] bg-[#f7faff] p-4 text-base outline-none focus:border-[#003399] focus:bg-white focus:ring-4 focus:ring-blue-100"
-                    value={editForm.checkout_time || ""}
-                    onChange={(e) =>
-                      setEditForm({
-                        ...editForm,
-                        checkout_time: e.target.value,
-                      })
-                    }
-                  />
+                <div className="rounded-2xl border-2 border-[#d8e4f7] bg-[#f7faff] p-4">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <span className="text-sm font-bold text-slate-600">
+                      วันที่และเวลาออก
+                    </span>
+                    <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-[#0046AD]">
+                      <input
+                        type="checkbox"
+                        className="h-5 w-5 accent-[#0046AD]"
+                        checked={Boolean(editForm.has_checkout)}
+                        onChange={(e) => setEditCheckoutEnabled(e.target.checked)}
+                      />
+                      เช็คเอาท์แล้ว
+                    </label>
+                  </div>
+                  {editForm.has_checkout ? (
+                    <>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
+                        <input
+                          type="date"
+                          lang="th-TH"
+                          className="min-w-0 rounded-xl border border-[#cbdcff] bg-white px-3 py-3 text-base outline-none focus:border-[#003399] focus:ring-4 focus:ring-blue-100"
+                          value={editForm.checkout_date || ""}
+                          onChange={(e) =>
+                            setEditForm((current) => ({
+                              ...current,
+                              checkout_date: e.target.value,
+                            }))
+                          }
+                        />
+                        <div className="flex items-center gap-2">
+                          <select
+                            aria-label="ชั่วโมงออกแบบ 24 ชั่วโมง"
+                            className="rounded-xl border border-[#cbdcff] bg-white px-3 py-3 text-base font-semibold outline-none focus:border-[#003399] focus:ring-4 focus:ring-blue-100"
+                            value={editForm.checkout_hour || "00"}
+                            onChange={(e) =>
+                              setEditForm((current) => ({
+                                ...current,
+                                checkout_hour: e.target.value,
+                              }))
+                            }
+                          >
+                            {HOUR_OPTIONS.map((hour) => (
+                              <option key={hour} value={hour}>{hour}</option>
+                            ))}
+                          </select>
+                          <span className="text-lg font-bold text-slate-500">:</span>
+                          <select
+                            aria-label="นาทีออก"
+                            className="rounded-xl border border-[#cbdcff] bg-white px-3 py-3 text-base font-semibold outline-none focus:border-[#003399] focus:ring-4 focus:ring-blue-100"
+                            value={editForm.checkout_minute || "00"}
+                            onChange={(e) =>
+                              setEditForm((current) => ({
+                                ...current,
+                                checkout_minute: e.target.value,
+                              }))
+                            }
+                          >
+                            {MINUTE_OPTIONS.map((minute) => (
+                              <option key={minute} value={minute}>{minute}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      <p className="mt-2 text-xs font-medium text-[#5071a5]">
+                        เวลาไทย 24 ชั่วโมง (UTC+7)
+                      </p>
+                    </>
+                  ) : (
+                    <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-600">
+                      ผู้ติดต่อยังอยู่ในพื้นที่
+                    </div>
+                  )}
                 </div>
               </div>
+              {editError && (
+                <div
+                  role="alert"
+                  className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700"
+                >
+                  {editError}
+                </div>
+              )}
             </div>
             <div className="flex gap-3 bg-[#f7faff] p-6 sm:p-8">
               <button
                 onClick={() => setEditingId(null)}
+                disabled={isSavingEdit}
                 className="flex-1 py-4 font-bold text-slate-500"
               >
                 ยกเลิก
               </button>
               <button
                 onClick={saveEdit}
-                className="flex-1 rounded-2xl bg-[#003399] py-4 text-base font-semibold text-white shadow-lg transition-all hover:bg-[#004ecc]"
+                disabled={isSavingEdit}
+                className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-[#003399] py-4 text-base font-semibold text-white shadow-lg transition-all hover:bg-[#004ecc] disabled:cursor-wait disabled:opacity-70"
               >
-                บันทึกการแก้ไข
+                {isSavingEdit && <Loader2 size={18} className="animate-spin" />}
+                {isSavingEdit ? "กำลังบันทึก..." : "บันทึกการแก้ไข"}
               </button>
             </div>
           </div>

@@ -195,6 +195,35 @@ const translations = {
   }
 };
 
+const PURPOSE_STORAGE_RULES = [
+  ["meeting", ["meeting", "ประชุม"]],
+  ["delivery", ["delivery", "ส่งสินค้า", "รับสินค้า", "ส่งของ", "รับของ"]],
+  ["maintenance", ["maintenance", "ซ่อมบำรุง", "ติดตั้ง"]],
+  ["training", ["training", "อบรม", "สอนงาน"]],
+  ["audit", ["audit", "ตรวจสอบ"]],
+  ["interview", ["interview", "สมัครงาน", "สัมภาษณ์"]],
+  ["billing", ["billing", "วางบิล", "รับเช็ค"]],
+];
+
+function normalizePurposeForStorage(purpose, otherPurpose) {
+  const rawPurpose = String(purpose || "").trim();
+  const normalized = rawPurpose.toLowerCase();
+
+  if (
+    normalized === "other" ||
+    normalized.includes("(other)") ||
+    rawPurpose.includes("อื่น")
+  ) {
+    const detail = String(otherPurpose || "").trim();
+    return detail ? `อื่น ๆ: ${detail}` : "other";
+  }
+
+  const matched = PURPOSE_STORAGE_RULES.find(([, keywords]) =>
+    keywords.some((keyword) => normalized.includes(keyword.toLowerCase()))
+  );
+  return matched?.[0] || rawPurpose;
+}
+
 const CARD_ASPECT_RATIO = 1.586;
 const CARD_HOLD_MS = 1200;
 const CAMERA_VIEW_ASPECT_RATIO = 4 / 3;
@@ -767,10 +796,10 @@ useEffect(() => {
             company: form.company,
             phone: form.phone,
             contact_person: form.contact_person,
-            purpose:
-              form.purpose === "อื่น ๆ" || form.purpose === "Other" || form.purpose === "기타 (Other)"
-                ? `อื่น ๆ: ${form.other_purpose}`
-                : form.purpose,
+            purpose: normalizePurposeForStorage(
+              form.purpose,
+              form.other_purpose
+            ),
             checkin_time: new Date().toISOString(),
           },
         ])
