@@ -102,14 +102,14 @@ function normalizePurpose(purpose) {
   return found ? found[0] : "other";
 }
 const filterStyles = {
-  TODAY: "bg-blue-600 border-blue-400 text-white shadow-lg shadow-blue-500/30",
+  TODAY: "bg-[#003399] border-[#003399] text-white shadow-lg shadow-blue-900/15",
   STAYING:
     "bg-rose-600 border-rose-400 text-white shadow-lg shadow-rose-500/30",
   CHECKOUT_TODAY:
     "bg-emerald-600 border-emerald-400 text-white shadow-lg shadow-emerald-500/30",
-  ALL: "bg-slate-800 border-slate-600 text-white shadow-lg shadow-slate-500/30",
+  ALL: "bg-[#003399] border-[#003399] text-white shadow-lg shadow-blue-900/15",
   CUSTOM:
-    "bg-indigo-600 border-indigo-400 text-white shadow-lg shadow-indigo-500/30",
+    "bg-[#004ecc] border-[#004ecc] text-white shadow-lg shadow-blue-900/15",
 };
 
 const PURPOSES = [
@@ -183,12 +183,23 @@ export default function Report() {
   });
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(
+    () => localStorage.getItem("report-theme") === "dark"
+  );
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [photoPreview, setPhotoPreview] = useState(null);
 
   const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
+    setIsDarkMode((current) => {
+      const next = !current;
+      localStorage.setItem("report-theme", next ? "dark" : "light");
+      return next;
+    });
+  };
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed((current) => !current);
   };
 
   const getFilterStatusText = () => {
@@ -376,6 +387,23 @@ export default function Report() {
       .subscribe();
     return () => supabase.removeChannel(channel);
   }, [activeFilter, loadVisitors, loadCheckoutQueue]);
+
+  useEffect(() => {
+    if (isSidebarCollapsed) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setIsSidebarCollapsed(true);
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isSidebarCollapsed]);
 
   const handleCheckOut = async (id) => {
     await supabase
@@ -662,7 +690,7 @@ export default function Report() {
       value: summary.today,
       hint: "Check-in ทั้งหมด",
       icon: Users,
-      accent: "text-blue-600 bg-blue-50 border-blue-100",
+      accent: "text-[#003399] bg-[#eef4ff] border-[#cbdcff]",
     },
     {
       id: "STAYING",
@@ -687,7 +715,7 @@ export default function Report() {
       value: summary.all,
       hint: "สะสมในระบบ",
       icon: ClipboardList,
-      accent: "text-violet-600 bg-violet-50 border-violet-100",
+      accent: "text-[#003399] bg-[#eef4ff] border-[#cbdcff]",
     },
   ];
   const quickFilters = [
@@ -698,20 +726,73 @@ export default function Report() {
   ];
 
   return (
-   <div
-      className={`min-h-screen font-sans pb-20 relative bg-cover bg-center bg-no-repeat bg-fixed transition-colors duration-300
-        ${isDarkMode ? 'text-slate-900' : 'text-slate-900'} 
-      `}
+    <div
+      className={`report-shell relative min-h-screen pb-20 text-[#1a2b49] ${
+        isDarkMode ? "report-dark bg-[#07152d]" : "bg-[#f0f4f8]"
+      }`}
       style={{
-        backgroundColor: isDarkMode ? "#6e7e88" : "#d3e0e2",
+        backgroundImage: isDarkMode
+          ? "radial-gradient(circle at 8% 0%, rgba(43, 103, 210, 0.22), transparent 30%), radial-gradient(circle at 92% 10%, rgba(0, 78, 204, 0.14), transparent 28%)"
+          : "radial-gradient(circle at 8% 0%, rgba(0, 51, 153, 0.08), transparent 28%), radial-gradient(circle at 92% 10%, rgba(0, 78, 204, 0.07), transparent 25%)",
       }}
     >
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap');
+        .report-shell,
+        .report-shell button,
+        .report-shell input,
+        .report-shell select {
+          font-family: 'Kanit', sans-serif;
+        }
+        .report-shell {
+          transition: background-color 180ms ease, color 180ms ease;
+        }
+        .report-dark [class*="bg-white"],
+        .report-dark [class*="bg-[#f7faff]"] {
+          background-color: #0f2344 !important;
+        }
+        .report-dark [class*="bg-[#eef4ff]"],
+        .report-dark [class*="bg-blue-50"],
+        .report-dark [class*="bg-slate-50"] {
+          background-color: #142d54 !important;
+        }
+        .report-dark [class*="border-blue-100"],
+        .report-dark [class*="border-[#d8e4f7]"],
+        .report-dark [class*="border-slate-200"],
+        .report-dark [class*="border-slate-100"] {
+          border-color: #294a75 !important;
+        }
+        .report-dark [class*="text-[#1a2b49]"],
+        .report-dark [class*="text-slate-900"],
+        .report-dark [class*="text-slate-800"],
+        .report-dark [class*="text-slate-700"] {
+          color: #edf4ff !important;
+        }
+        .report-dark [class*="text-[#003399]"] {
+          color: #91b7ff !important;
+        }
+        .report-dark [class*="text-[#315184]"],
+        .report-dark [class*="text-[#5f7394]"],
+        .report-dark [class*="text-[#6d87ad]"],
+        .report-dark [class*="text-slate-600"],
+        .report-dark [class*="text-slate-500"],
+        .report-dark [class*="text-slate-400"] {
+          color: #b8c9e5 !important;
+        }
+        .report-dark input,
+        .report-dark select {
+          color-scheme: dark;
+        }
+        .report-dark tbody tr:hover {
+          background-color: #142d54 !important;
+        }
+      `}</style>
       {/* Loading Overlay */}
       {isLoading && (
-        <div className="fixed inset-0 z-[100] bg-white/60 backdrop-blur-[2px] flex flex-col items-center justify-center transition-all animate-in fade-in duration-300">
-          <div className="bg-white p-8 rounded-[2rem] shadow-2xl flex flex-col items-center gap-4">
-            <Loader2 size={48} className="text-indigo-600 animate-spin" />
-            <p className="font-black text-slate-600 tracking-tight text-lg">
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#f0f4f8]/80 backdrop-blur-sm transition-all animate-in fade-in duration-300">
+          <div className="flex flex-col items-center gap-4 rounded-[28px] border border-blue-100 bg-white p-8 shadow-[0_20px_50px_rgba(0,51,153,0.16)]">
+            <Loader2 size={48} className="animate-spin text-[#003399]" />
+            <p className="text-lg font-semibold tracking-tight text-[#1a2b49]">
               กำลังโหลดข้อมูล...
             </p>
           </div>
@@ -795,9 +876,177 @@ export default function Report() {
       </div>
     </nav> )}
 
-      <div className="max-w-[1600px] mx-auto p-6 lg:p-10 space-y-8">
+      <div
+        className="mx-auto flex max-w-[1600px] flex-col items-start gap-4 p-3 sm:p-4 lg:p-6"
+      >
+        {!isSidebarCollapsed && (
+          <button
+            type="button"
+            onClick={() => setIsSidebarCollapsed(true)}
+            className="fixed inset-0 z-[70] cursor-default bg-[#071a3b]/45 backdrop-blur-[2px]"
+            aria-label="ปิด Sidebar"
+          />
+        )}
+        <aside
+          className={`fixed inset-y-0 left-0 z-[80] w-[280px] max-w-[88vw] overflow-y-auto border-r border-blue-100 bg-white p-5 shadow-[18px_0_45px_rgba(0,30,80,0.20)] transition-transform duration-200 ${
+            isSidebarCollapsed ? "pointer-events-none -translate-x-full" : "translate-x-0"
+          }`}
+        >
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            className="absolute right-4 top-5 z-10 hidden h-9 w-9 items-center justify-center rounded-xl border-2 border-blue-100 bg-[#f7faff] text-[#003399] transition hover:border-[#003399] lg:flex"
+            title="ปิด Sidebar"
+            aria-label="ปิด Sidebar"
+            aria-expanded={!isSidebarCollapsed}
+          >
+            <X size={18} />
+          </button>
+
+          <div className="flex items-center gap-3 border-b border-blue-100 pb-4 lg:pr-10">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-[#003399] text-base font-bold text-white shadow-[0_8px_18px_rgba(0,51,153,0.22)]">
+              TDK
+            </div>
+            <div className={`min-w-0 flex-1 ${isSidebarCollapsed ? "lg:hidden" : ""}`}>
+              <h1 className="truncate text-xl font-medium leading-tight tracking-tight text-[#003399]">
+                <span className="font-bold">TDK</span> INDUSTRIAL
+              </h1>
+              <p className="mt-0.5 text-xs font-medium leading-snug text-[#5f7394]">
+                บริษัท ที.ดี.เค.อินดัสเตรียล จำกัด
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={toggleSidebar}
+              className="ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 border-blue-100 bg-[#f7faff] text-[#003399] lg:hidden"
+              title="ปิด Sidebar"
+              aria-label="ปิด Sidebar"
+              aria-expanded={!isSidebarCollapsed}
+            >
+              <X size={19} />
+            </button>
+          </div>
+
+          <div>
+            <div className="mt-4 hidden items-center justify-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#6d87ad] lg:flex">
+              <BarChart3 size={14} />
+              {!isSidebarCollapsed && <span>เมนูรายงาน</span>}
+            </div>
+            <nav className="mt-3 grid grid-cols-3 gap-2 lg:grid-cols-1" aria-label="เมนูรายงาน">
+              <a
+                href="#daily-summary"
+                onClick={() => setIsSidebarCollapsed(true)}
+                className={`flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#003399] px-3 text-sm font-semibold text-white shadow-[0_6px_16px_rgba(0,51,153,0.16)] ${
+                  isSidebarCollapsed ? "lg:px-0" : "lg:justify-start"
+                }`}
+                title="สรุปวันนี้"
+              >
+                <Calendar size={18} />
+                <span className={isSidebarCollapsed ? "lg:hidden" : ""}>สรุปวันนี้</span>
+              </a>
+              <a
+                href="#visitor-list"
+                onClick={() => setIsSidebarCollapsed(true)}
+                className={`flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#eef4ff] px-3 text-sm font-semibold text-[#003399] transition hover:bg-[#dfeaff] ${
+                  isSidebarCollapsed ? "lg:px-0" : "lg:justify-start"
+                }`}
+                title="รายชื่อผู้ติดต่อ"
+              >
+                <Users size={18} />
+                <span className={isSidebarCollapsed ? "lg:hidden" : ""}>รายชื่อผู้ติดต่อ</span>
+              </a>
+              <a
+                href="#analytics"
+                onClick={() => setIsSidebarCollapsed(true)}
+                className={`flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#eef4ff] px-3 text-sm font-semibold text-[#003399] transition hover:bg-[#dfeaff] ${
+                  isSidebarCollapsed ? "lg:px-0" : "lg:justify-start"
+                }`}
+                title="ภาพรวมสถิติ"
+              >
+                <BarChart3 size={18} />
+                <span className={isSidebarCollapsed ? "lg:hidden" : ""}>ภาพรวมสถิติ</span>
+              </a>
+            </nav>
+
+            <div className="mt-4 grid grid-cols-2 gap-2 border-t border-blue-100 pt-4 lg:grid-cols-1">
+              <button
+                type="button"
+                onClick={() => {
+                  loadSummary();
+                  loadVisitors(activeFilter);
+                  loadCheckoutQueue();
+                }}
+                className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-[#d8e4f7] bg-[#f7faff] px-3 text-sm font-semibold text-[#003399] transition hover:border-[#003399] hover:bg-white ${
+                  isSidebarCollapsed ? "lg:px-0" : "lg:justify-start"
+                }`}
+                title="รีเฟรชข้อมูล"
+              >
+                <RefreshCw size={18} />
+                <span className={isSidebarCollapsed ? "lg:hidden" : ""}>รีเฟรชข้อมูล</span>
+              </button>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-[#d8e4f7] bg-[#f7faff] px-3 text-sm font-semibold text-[#003399] transition hover:border-[#003399] hover:bg-white ${
+                  isSidebarCollapsed ? "lg:px-0" : "lg:justify-start"
+                }`}
+                title={isDarkMode ? "เปลี่ยนเป็นธีมสว่าง" : "เปลี่ยนเป็นธีมมืด"}
+                aria-pressed={isDarkMode}
+              >
+                {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+                <span className={isSidebarCollapsed ? "lg:hidden" : ""}>
+                  {isDarkMode ? "ธีมสว่าง" : "ธีมมืด"}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/")}
+                className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-[#d8e4f7] bg-white px-3 text-sm font-semibold text-[#315184] transition hover:border-[#003399] hover:bg-[#f7faff] ${
+                  isSidebarCollapsed ? "lg:px-0" : "lg:justify-start"
+                }`}
+                title="หน้าลงทะเบียน"
+              >
+                <Home size={18} />
+                <span className={isSidebarCollapsed ? "lg:hidden" : ""}>หน้าลงทะเบียน</span>
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        <main className="flex w-full min-w-0 flex-1 flex-col gap-4">
+        <div className="order-0 flex min-h-12 items-center justify-between gap-3 rounded-[18px] border border-blue-100 bg-white px-3 py-2 shadow-[0_8px_22px_rgba(0,51,153,0.06)]">
+          <div className="flex min-w-0 items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsSidebarCollapsed(false)}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#003399] px-4 text-sm font-semibold text-white transition hover:bg-[#004ecc]"
+              aria-label="เปิด Sidebar"
+              aria-expanded={!isSidebarCollapsed}
+            >
+              <ChevronRight size={18} /> เมนู
+            </button>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-[#003399] sm:text-base">
+                รายงานผู้มาติดต่อ
+              </p>
+              <p className="hidden text-xs text-[#5f7394] sm:block">
+                TDK INDUSTRIAL
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 border-[#d8e4f7] bg-[#f7faff] text-[#003399] transition hover:border-[#003399]"
+            title={isDarkMode ? "เปลี่ยนเป็นธีมสว่าง" : "เปลี่ยนเป็นธีมมืด"}
+            aria-label={isDarkMode ? "เปลี่ยนเป็นธีมสว่าง" : "เปลี่ยนเป็นธีมมืด"}
+            aria-pressed={isDarkMode}
+          >
+            {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+        </div>
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div id="daily-summary" className="order-1 grid scroll-mt-6 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {summaryCards.map((item) => {
             const Icon = item.icon;
             return (
@@ -807,16 +1056,16 @@ export default function Report() {
                   setActiveFilter(item.id);
                   loadVisitors(item.id);
                 }}
-                className={`bg-white p-5 rounded-lg border text-left transition-all hover:-translate-y-0.5 hover:shadow-lg ${
+                className={`min-h-[124px] rounded-[20px] border-2 bg-white p-4 text-left shadow-[0_8px_24px_rgba(0,51,153,0.07)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(0,51,153,0.12)] ${
                   activeFilter === item.id
-                    ? "border-slate-900 ring-4 ring-slate-200"
-                    : "border-slate-200"
+                    ? "border-[#003399] ring-4 ring-blue-100"
+                    : "border-white hover:border-[#bfd2f2]"
                 }`}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2">
-                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+                      <p className="text-sm font-semibold uppercase tracking-wide text-[#315184]">
                         {item.label}
                       </p>
                       {item.live && (
@@ -829,49 +1078,21 @@ export default function Report() {
                         </span>
                       )}
                     </div>
-                    <p className="mt-2 text-4xl font-black tracking-tight text-slate-900">
+                    <p className="mt-1 text-4xl font-bold leading-none tracking-tight text-[#003399]">
                       {item.value.toLocaleString()}
                     </p>
-                    <p className="mt-1 text-sm font-semibold text-slate-500">
+                    <p className="mt-1 text-sm font-medium text-[#5f7394]">
                       {item.hint}
                     </p>
-                    {item.live && (
-                      <div className="mt-3 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2">
-                        <div className="flex -space-x-2">
-                          {Array.from({ length: Math.min(item.value, 4) }).map((_, idx) => (
-                            <span
-                              key={idx}
-                              className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-rose-500 text-white shadow-sm"
-                              style={{ animationDelay: `${idx * 140}ms` }}
-                            >
-                              <Users size={12} className="animate-pulse" />
-                            </span>
-                          ))}
-                          {item.value > 4 && (
-                            <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-rose-200 text-[10px] font-black text-rose-700 shadow-sm">
-                              +{item.value - 4}
-                            </span>
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-black text-rose-700">
-                            มีผู้มาติดต่ออยู่ในพื้นที่
-                          </p>
-                          <p className="text-[11px] font-bold text-rose-500">
-                            ต้องเฝ้าดูการเช็คเอ้าท์ต่อเนื่อง
-                          </p>
-                        </div>
-                      </div>
-                    )}
                   </div>
-                  <div className={`relative p-3 rounded-lg border ${item.accent}`}>
+                  <div className={`relative rounded-lg border p-2.5 ${item.accent}`}>
                     {item.live && (
                       <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5">
                         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75"></span>
                         <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-rose-500"></span>
                       </span>
                     )}
-                    <Icon size={24} className={item.live ? "animate-pulse" : ""} />
+                    <Icon size={22} className={item.live ? "animate-pulse" : ""} />
                   </div>
                 </div>
               </button>
@@ -880,18 +1101,18 @@ export default function Report() {
         </div>
 
         {/* Operational Overview */}
-        <div className="grid grid-cols-1 xl:grid-cols-[1.35fr_0.95fr] gap-6">
-          <section className="bg-white border border-slate-200 rounded-lg shadow-sm p-6">
+        <div id="analytics" className="order-5 grid scroll-mt-6 grid-cols-1 gap-6 xl:grid-cols-[1.35fr_0.95fr]">
+          <section className="rounded-[28px] border border-blue-100 bg-white p-5 shadow-[0_14px_38px_rgba(0,51,153,0.08)] sm:p-7">
             <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
               <div>
-                <div className="flex items-center gap-2 text-slate-500 font-bold text-xs uppercase tracking-wide">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#45638f]">
                   <BarChart3 size={16} />
                   Overview
                 </div>
-                <h2 className="mt-2 text-2xl font-black text-slate-900">
+                <h2 className="mt-2 text-2xl font-bold text-[#003399] sm:text-3xl">
                   ภาพรวมการเข้าออกวันนี้
                 </h2>
-                <p className="mt-1 text-sm font-semibold text-slate-500">
+                <p className="mt-1 text-base font-normal text-[#5f7394]">
                   แสดงสถานะที่ รปภ. ต้องติดตามแบบเรียลไทม์
                 </p>
               </div>
@@ -900,7 +1121,7 @@ export default function Report() {
                   loadSummary();
                   loadVisitors(activeFilter);
                 }}
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-white"
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border-2 border-[#d8e4f7] bg-[#f7faff] px-5 text-base font-semibold text-[#003399] hover:border-[#003399] hover:bg-white"
               >
                 <RefreshCw size={16} />
                 รีเฟรช
@@ -908,7 +1129,7 @@ export default function Report() {
             </div>
 
             <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="rounded-lg bg-slate-50 border border-slate-200 p-4">
+              <div className="rounded-2xl border border-blue-100 bg-[#f7faff] p-4">
                 <div className="flex items-center justify-between text-sm font-bold text-slate-600">
                   <span>ยังอยู่ในพื้นที่</span>
                   <span>{activeRate}%</span>
@@ -920,7 +1141,7 @@ export default function Report() {
                   />
                 </div>
               </div>
-              <div className="rounded-lg bg-slate-50 border border-slate-200 p-4">
+              <div className="rounded-2xl border border-blue-100 bg-[#f7faff] p-4">
                 <div className="flex items-center justify-between text-sm font-bold text-slate-600">
                   <span>เช็คเอ้าท์แล้ว</span>
                   <span>{checkoutRate}%</span>
@@ -932,19 +1153,19 @@ export default function Report() {
                   />
                 </div>
               </div>
-              <div className="rounded-lg bg-slate-50 border border-slate-200 p-4">
+              <div className="rounded-2xl border border-blue-100 bg-[#f7faff] p-4">
                 <div className="flex items-center gap-2 text-sm font-bold text-slate-600">
                   <TrendingUp size={16} className="text-blue-600" />
                   ชุดข้อมูลที่แสดง
                 </div>
-                <p className="mt-2 text-3xl font-black text-slate-900">
+                <p className="mt-2 text-3xl font-bold text-[#003399]">
                   {visitors.length.toLocaleString()}
                 </p>
               </div>
             </div>
 
             <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1fr_0.9fr] gap-6">
-              <div className="rounded-lg border border-slate-200 p-4">
+              <div className="rounded-2xl border border-blue-100 p-4">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-black text-slate-700">
                     Check-in ตามช่วงเวลา
@@ -975,7 +1196,7 @@ export default function Report() {
                 </div>
               </div>
 
-              <div className="rounded-lg border border-slate-200 p-4">
+              <div className="rounded-2xl border border-blue-100 p-4">
                 <p className="text-sm font-black text-slate-700">
                   วัตถุประสงค์ยอดนิยม
                 </p>
@@ -1005,17 +1226,17 @@ export default function Report() {
             </div>
           </section>
 
-          <aside className="bg-white border border-slate-200 rounded-lg shadow-sm p-6">
+          <aside className="rounded-[28px] border border-blue-100 bg-white p-5 shadow-[0_14px_38px_rgba(0,51,153,0.08)] sm:p-7">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 text-rose-600 font-bold text-xs uppercase tracking-wide">
                   <AlertTriangle size={16} />
                   Action Queue
                 </div>
-                <h2 className="mt-2 text-2xl font-black text-slate-900">
+                <h2 className="mt-2 text-2xl font-bold text-[#003399] sm:text-3xl">
                   รอเช็คเอ้าท์
                 </h2>
-                <p className="mt-1 text-sm font-semibold text-slate-500">
+                <p className="mt-1 text-base font-normal text-[#5f7394]">
                   รายการที่อยู่นานสุดขึ้นก่อน
                 </p>
               </div>
@@ -1029,7 +1250,7 @@ export default function Report() {
                 priorityCheckoutList.map((v) => (
                   <div
                     key={v.id}
-                    className="rounded-lg border border-slate-200 p-4 hover:border-rose-200 hover:bg-rose-50/40 transition-colors"
+                    className="rounded-2xl border border-blue-100 p-4 transition-colors hover:border-rose-200 hover:bg-rose-50/40"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -1046,7 +1267,7 @@ export default function Report() {
                       </div>
                       <button
                         onClick={() => handleCheckOut(v.id)}
-                        className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-black text-white hover:bg-emerald-700"
+                        className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-base font-semibold text-white hover:bg-emerald-700"
                       >
                         <CheckCircle size={16} />
                         ออก
@@ -1120,8 +1341,8 @@ export default function Report() {
         </div>
 
         {/* Command Bar */}
-        <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-5 space-y-5">
-          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+        <div className="order-2 space-y-4 rounded-[22px] border border-blue-100 bg-white p-4 shadow-[0_10px_28px_rgba(0,51,153,0.07)]">
+          <div className="flex flex-col justify-between gap-3 xl:flex-row xl:items-center">
             <div className="flex flex-wrap gap-2">
               {quickFilters.map((item) => {
                 const Icon = item.icon;
@@ -1132,10 +1353,10 @@ export default function Report() {
                       setActiveFilter(item.id);
                       loadVisitors(item.id);
                     }}
-                    className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-black transition-colors ${
+                    className={`inline-flex min-h-10 items-center gap-2 rounded-xl border-2 px-4 py-2 text-sm font-semibold transition-colors ${
                       activeFilter === item.id
-                        ? "border-slate-900 bg-slate-900 text-white"
-                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                        ? "border-[#003399] bg-[#003399] text-white shadow-[0_8px_18px_rgba(0,51,153,0.20)]"
+                        : "border-[#d8e4f7] bg-[#f7faff] text-[#315184] hover:border-[#003399] hover:bg-white"
                     }`}
                   >
                     <Icon size={16} />
@@ -1149,10 +1370,10 @@ export default function Report() {
               <button
                 onClick={() => exportToExcel(selectedIds)}
                 disabled={selectedIds.length === 0}
-                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-black transition-colors ${
+                className={`inline-flex min-h-10 items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
                   selectedIds.length > 0
                     ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                    : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                    : "cursor-not-allowed bg-[#edf1f7] text-[#8d9bb0]"
                 }`}
               >
                 <Download size={16} />
@@ -1170,41 +1391,54 @@ export default function Report() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_auto_auto] gap-3">
-            <div className="relative">
-              <Search
-                size={19}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-              />
+          <div className="grid grid-cols-1 items-end gap-3 lg:grid-cols-[minmax(300px,1fr)_180px_180px_auto]">
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold text-[#315184]">
+                ค้นหาผู้มาติดต่อ
+              </span>
+              <span className="relative block">
+                <Search
+                  size={21}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-[#5071a5]"
+                />
+                <input
+                  type="text"
+                  placeholder="ชื่อ บริษัท ผู้ติดต่อ หรือเบอร์โทร"
+                  value={searchName}
+                  onChange={(e) => setSearchName(e.target.value)}
+                  className="h-12 w-full rounded-xl border-2 border-[#d8e4f7] bg-[#f7faff] pl-12 pr-4 text-base font-normal text-[#1a2b49] outline-none transition placeholder:text-[#8494ad] focus:border-[#003399] focus:bg-white focus:ring-4 focus:ring-blue-100"
+                />
+              </span>
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold text-[#315184]">
+                ตั้งแต่วันที่
+              </span>
               <input
-                type="text"
-                placeholder="ค้นหาชื่อ บริษัท คนที่มาติดต่อ หรือเบอร์โทร"
-                value={searchName}
-                onChange={(e) => setSearchName(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 py-3 pl-12 pr-4 text-sm font-semibold outline-none focus:border-slate-400 focus:bg-white"
+                type="date"
+                value={searchStart}
+                onChange={(e) => setSearchStart(e.target.value)}
+                className="h-12 w-full rounded-xl border-2 border-[#d8e4f7] bg-[#f7faff] px-4 text-base font-medium text-[#1a2b49] outline-none transition focus:border-[#003399] focus:bg-white focus:ring-4 focus:ring-blue-100"
               />
-            </div>
-            <input
-              type="date"
-              value={searchStart}
-              onChange={(e) => setSearchStart(e.target.value)}
-              className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold outline-none focus:border-slate-400 focus:bg-white"
-              title="ตั้งแต่วันที่"
-            />
-            <input
-              type="date"
-              value={searchEnd}
-              onChange={(e) => setSearchEnd(e.target.value)}
-              className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold outline-none focus:border-slate-400 focus:bg-white"
-              title="ถึงวันที่"
-            />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold text-[#315184]">
+                ถึงวันที่
+              </span>
+              <input
+                type="date"
+                value={searchEnd}
+                onChange={(e) => setSearchEnd(e.target.value)}
+                className="h-12 w-full rounded-xl border-2 border-[#d8e4f7] bg-[#f7faff] px-4 text-base font-medium text-[#1a2b49] outline-none transition focus:border-[#003399] focus:bg-white focus:ring-4 focus:ring-blue-100"
+              />
+            </label>
             <div className="flex gap-2">
               <button
                 onClick={() => {
                   setActiveFilter("CUSTOM");
                   loadVisitors("CUSTOM");
                 }}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-3 text-sm font-black text-white hover:bg-blue-700"
+                className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#003399] px-5 text-base font-semibold text-white shadow-[0_6px_16px_rgba(0,51,153,0.18)] transition hover:bg-[#004ecc]"
               >
                 <Search size={16} />
                 ค้นหา
@@ -1217,7 +1451,7 @@ export default function Report() {
                   loadVisitors("TODAY");
                   setActiveFilter("TODAY");
                 }}
-                className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-600 hover:bg-slate-50"
+                className="inline-flex h-12 w-12 items-center justify-center rounded-xl border-2 border-[#d8e4f7] bg-white text-[#315184] transition hover:border-[#003399] hover:bg-[#f7faff]"
                 title="รีเซ็ต"
               >
                 <RotateCcw size={18} />
@@ -1227,25 +1461,19 @@ export default function Report() {
         </div>
 
         {/* Table Results Bar */}
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="order-3 flex flex-col items-stretch justify-between gap-3 rounded-[18px] border border-blue-100 bg-white p-3 shadow-[0_8px_22px_rgba(0,51,153,0.06)] sm:flex-row sm:items-center">
           <div
-            className={`
-  flex items-center gap-3 px-4 py-3 rounded-lg border transition-all duration-300 ease-in-out
-  ${
-    filterStyles[activeFilter] ||
-    "bg-indigo-50 border-indigo-100 text-indigo-700"
-  } 
-`}
+            className={`flex items-center gap-3 rounded-xl border-2 px-4 py-2 transition-all duration-300 ease-in-out ${
+              filterStyles[activeFilter] ||
+              "border-blue-200 bg-blue-50 text-[#003399]"
+            }`}
           >
-            {/* ตัว Icon ก็ปรับสีตามสถานะได้เช่นกัน */}
             <Filter size={16} className="opacity-70" />
-
             <div className="flex flex-col">
-              <span className="text-[10px] uppercase tracking-wider opacity-60 font-bold">
+              <span className="text-[11px] font-medium uppercase tracking-wider opacity-75">
                 กำลังแสดงผล :
               </span>
-              <span className="text-sm font-black flex items-center gap-2">
-                {/* เพิ่มจุดไฟกะพริบ (Ping Animation) เป็นลูกเล่นเพิ่มความเท่ */}
+              <span className="flex items-center gap-2 text-sm font-semibold">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-current"></span>
@@ -1254,25 +1482,21 @@ export default function Report() {
               </span>
             </div>
           </div>
-          <div className="text-slate-500 font-bold text-sm bg-white px-4 py-3 rounded-lg shadow-sm border border-slate-200">
-            พบทั้งหมด{" "}
-            <span className="text-indigo-600 text-lg font-black mx-1">
-              {visitors.length}
-            </span>{" "}
-            รายการ
+          <div className="rounded-xl bg-[#eef4ff] px-4 py-2 text-sm font-medium text-[#315184]">
+            พบทั้งหมด <span className="mx-1 text-xl font-bold text-[#003399]">{visitors.length}</span> รายการ
           </div>
         </div>
 
         {/* Main Table Content */}
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden transition-all">
+        <div id="visitor-list" className="order-4 scroll-mt-6 overflow-hidden rounded-[28px] border border-blue-100 bg-white shadow-[0_14px_38px_rgba(0,51,153,0.09)] transition-all">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full min-w-[1080px] border-collapse text-left">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="px-5 py-4 text-center w-16">
+                <tr className="border-b border-[#002a80] bg-[#003399]">
+                  <th className="w-16 px-5 py-3 text-center">
                     <input
                       type="checkbox"
-                      className="w-5 h-5 cursor-pointer accent-indigo-600 rounded-lg"
+                      className="h-5 w-5 cursor-pointer rounded-lg accent-[#8fb5ff]"
                       checked={
                         visitors.length > 0 &&
                         selectedIds.length === visitors.length
@@ -1280,32 +1504,32 @@ export default function Report() {
                       onChange={toggleSelectAll}
                     />
                   </th>
-                  <th className="px-5 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">
+                  <th className="px-5 py-3.5 text-sm font-semibold uppercase tracking-wider text-white">
                     ข้อมูลผู้ติดต่อ
                   </th>
-                  <th className="px-5 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">
+                  <th className="px-5 py-3.5 text-sm font-semibold uppercase tracking-wider text-white">
                     บริษัท & วัตถุประสงค์
                   </th>
-                  <th className="px-5 py-4 text-xs font-black text-slate-500 uppercase tracking-wider">
+                  <th className="px-5 py-3.5 text-sm font-semibold uppercase tracking-wider text-white">
                     สถานะเวลา (24H)
                   </th>
-                  <th className="px-5 py-4 text-xs font-black text-slate-500 uppercase tracking-wider text-right">
+                  <th className="px-5 py-3.5 text-right text-sm font-semibold uppercase tracking-wider text-white">
                     จัดการ
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-blue-50">
                 {visitors.map((v) => (
                   <tr
                     key={v.id}
-                    className={`group hover:bg-slate-50 transition-all ${
-                      selectedIds.includes(v.id) ? "bg-indigo-50/40" : ""
+                    className={`group transition-all hover:bg-[#f7faff] ${
+                      selectedIds.includes(v.id) ? "bg-[#eef4ff]" : ""
                     }`}
                   >
                     <td className="px-5 py-4 text-center">
                       <input
                         type="checkbox"
-                        className="w-5 h-5 cursor-pointer accent-indigo-600 rounded-lg"
+                        className="h-5 w-5 cursor-pointer rounded-lg accent-[#003399]"
                         checked={selectedIds.includes(v.id)}
                         onChange={() => toggleSelect(v.id)}
                       />
@@ -1313,11 +1537,11 @@ export default function Report() {
                     <td className="px-5 py-4">
                       <div className="space-y-1.5">
                         <div className="flex items-center gap-3">
-                          <span className="px-2 py-0.5 bg-slate-100 rounded text-[10px] font-black text-slate-400">
+                          <span className="rounded bg-[#eef4ff] px-2 py-0.5 text-xs font-semibold text-[#5071a5]">
                             #{v.id}
                           </span>
                           {/* ค้นหาบรรทัด {v.full_name} แล้วแก้เป็นแบบนี้ */}
-                          <div className="font-black text-slate-800 text-base lg:text-lg tracking-tight leading-tight flex items-center gap-2">
+                          <div className="flex items-center gap-2 text-lg font-semibold leading-tight tracking-tight text-[#1a2b49]">
                             {v.full_name}
                             {!v.checkout_time && (
                               <span className="flex h-3 w-3 relative">
@@ -1327,7 +1551,7 @@ export default function Report() {
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 text-indigo-500 font-bold text-[11px] uppercase bg-indigo-50 w-fit px-3 py-1 rounded-full border border-indigo-100">
+                        <div className="flex w-fit items-center gap-2 rounded-full border border-blue-100 bg-[#eef4ff] px-3 py-1 text-sm font-medium text-[#003399]">
                           <UserCircle size={14} /> ติดต่อ:{" "}
                           {v.contact_person || "ไม่ระบุ"}
                         </div>
@@ -1335,22 +1559,22 @@ export default function Report() {
                     </td>
                     <td className="px-5 py-4">
                       <div className="space-y-3">
-                        <div className="flex items-center gap-3 text-slate-700 font-extrabold text-base">
-                          <Building2 size={18} className="text-slate-300" />
+                        <div className="flex items-center gap-3 text-base font-semibold text-[#1a2b49]">
+                          <Building2 size={18} className="text-[#6d87ad]" />
                           {v.company || "ทั่วไป"}
                         </div>
-                        <div className="inline-flex px-3 py-1.5 bg-white border border-slate-200 text-slate-500 rounded-md text-[11px] font-black">
+                        <div className="inline-flex rounded-lg border border-blue-100 bg-white px-3 py-1.5 text-sm font-medium text-[#5f7394]">
                           {translatePurpose(v.purpose, v.other_purpose)}
                         </div>
                       </div>
                     </td>
                     <td className="px-5 py-4">
-                      <div className="flex flex-col gap-2 font-mono">
+                      <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-4 text-slate-400">
-                          <span className="w-14 text-center font-black text-[10px] bg-slate-100 rounded-lg py-1">
+                          <span className="w-16 rounded-lg bg-[#eef4ff] py-1 text-center text-xs font-semibold text-[#315184]">
                             เข้า
                           </span>
-                          <span className="font-bold text-slate-700 text-sm">
+                          <span className="text-sm font-medium text-[#1a2b49]">
                             {formatDateTime(v.checkin_time)}
                           </span>
                         </div>
@@ -1362,7 +1586,7 @@ export default function Report() {
                           }`}
                         >
                           <span
-                            className={`w-14 text-center font-black text-[10px] rounded-lg py-1 ${
+                            className={`w-16 rounded-lg py-1 text-center text-xs font-semibold ${
                               v.checkout_time
                                 ? "bg-emerald-100"
                                 : "bg-rose-100 animate-pulse"
@@ -1376,8 +1600,8 @@ export default function Report() {
                               : "ยังไม่ออก"}
                           </span>
                         </div>
-                        <div className="mt-1 text-[11px] font-black text-slate-400 flex items-center gap-2 pl-1 bg-slate-50 w-fit pr-3 py-1 rounded-lg border border-slate-100">
-                          <Clock size={12} className="text-slate-300" />{" "}
+                        <div className="mt-1 flex w-fit items-center gap-2 rounded-lg border border-blue-100 bg-[#f7faff] py-1 pl-2 pr-3 text-sm font-medium text-[#5f7394]">
+                          <Clock size={14} className="text-[#6d87ad]" />{" "}
                           {calculateDuration(v.checkin_time, v.checkout_time)}
                         </div>
                       </div>
@@ -1387,7 +1611,7 @@ export default function Report() {
                         {!v.checkout_time && (
                           <button
                             onClick={() => handleCheckOut(v.id)}
-                            className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-black hover:bg-emerald-700 transition-colors"
+                            className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-base font-semibold text-white transition-colors hover:bg-emerald-700"
                             title="เช็คเอ้าท์"
                           >
                             <CheckCircle size={17} />
@@ -1403,7 +1627,7 @@ export default function Report() {
                             })
                           }
                           disabled={!getVisitorPhoto(v)}
-                          className={`p-2.5 border rounded-lg transition-colors ${
+                          className={`min-h-11 min-w-11 rounded-xl border p-2.5 transition-colors ${
                             getVisitorPhoto(v)
                               ? "bg-white border-slate-200 text-sky-600 hover:bg-sky-50 hover:border-sky-200"
                               : "bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed"
@@ -1415,7 +1639,7 @@ export default function Report() {
                         </button>
                         <button
                           onClick={() => openEdit(v)}
-                          className="p-2.5 bg-white border border-slate-200 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors"
+                          className="min-h-11 min-w-11 rounded-xl border border-blue-100 bg-white p-2.5 text-[#003399] transition-colors hover:border-[#003399] hover:bg-[#eef4ff]"
                           title="แก้ไข"
                         >
                           <Edit size={18} />
@@ -1424,7 +1648,7 @@ export default function Report() {
                           onClick={() =>
                             window.open(`/print/${v.id}`, "_blank")
                           }
-                          className="p-2.5 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
+                          className="min-h-11 min-w-11 rounded-xl border border-blue-100 bg-white p-2.5 text-[#315184] transition-colors hover:border-[#003399] hover:bg-[#eef4ff]"
                           title="พิมพ์สลิป"
                         >
                           <Printer size={18} />
@@ -1441,7 +1665,7 @@ export default function Report() {
                               loadCheckoutQueue();
                             }
                           }}
-                          className="p-2.5 bg-white border border-slate-200 text-rose-500 rounded-lg hover:bg-rose-50 transition-colors"
+                          className="min-h-11 min-w-11 rounded-xl border border-rose-100 bg-white p-2.5 text-rose-500 transition-colors hover:border-rose-300 hover:bg-rose-50"
                           title="ลบ"
                         >
                           <Trash2 size={18} />
@@ -1467,26 +1691,27 @@ export default function Report() {
             </table>
           </div>
         </div>
+        </main>
       </div>
       {photoPreview && (
         <div
-          className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-[#071a3b]/80 p-4 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-label={`รูปบัตรของ ${photoPreview.name}`}
           onClick={() => setPhotoPreview(null)}
         >
           <div
-            className="w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+            className="w-full max-w-4xl overflow-hidden rounded-[28px] bg-white shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4">
+            <div className="flex items-center justify-between gap-4 border-b border-blue-100 px-6 py-5">
               <div className="min-w-0">
-                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wide text-sky-600">
+                <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-[#003399]">
                   <Maximize2 size={15} />
                   รูปบัตรผู้มาติดต่อ
                 </div>
-                <p className="mt-1 truncate text-lg font-black text-slate-900">
+                <p className="mt-1 truncate text-xl font-semibold text-[#1a2b49]">
                   {photoPreview.name} <span className="text-slate-400">#{photoPreview.id}</span>
                 </p>
               </div>
@@ -1500,7 +1725,7 @@ export default function Report() {
                 <X size={24} />
               </button>
             </div>
-            <div className="flex max-h-[80vh] items-center justify-center bg-slate-100 p-4 sm:p-6">
+            <div className="flex max-h-[80vh] items-center justify-center bg-[#eef4ff] p-4 sm:p-6">
               <img
                 src={photoPreview.src}
                 alt={`รูปบัตรของ ${photoPreview.name}`}
@@ -1511,10 +1736,10 @@ export default function Report() {
         </div>
       )}
       {editingId && (
-        <div className="fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2.5rem] w-full max-w-2xl shadow-2xl overflow-hidden">
-            <div className="p-8 border-b flex justify-between items-center">
-              <h2 className="text-2xl font-black text-slate-800">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#071a3b]/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl overflow-hidden rounded-[30px] bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-blue-100 p-6 sm:p-8">
+              <h2 className="text-2xl font-bold text-[#003399]">
                 แก้ไขข้อมูล #{editingId}
               </h2>
               <button
@@ -1531,7 +1756,7 @@ export default function Report() {
                 </label>
                 <input
                   type="text"
-                  className="w-full p-4 bg-slate-50 rounded-2xl border-2 border-transparent focus:border-indigo-500 outline-none"
+                  className="w-full rounded-2xl border-2 border-[#d8e4f7] bg-[#f7faff] p-4 text-base outline-none focus:border-[#003399] focus:bg-white focus:ring-4 focus:ring-blue-100"
                   value={editForm.full_name || ""}
                   onChange={(e) =>
                     setEditForm({ ...editForm, full_name: e.target.value })
@@ -1544,7 +1769,7 @@ export default function Report() {
                 </label>
                 <input
                   type="text"
-                  className="w-full p-4 bg-slate-50 rounded-2xl border-2 border-transparent focus:border-indigo-500 outline-none"
+                  className="w-full rounded-2xl border-2 border-[#d8e4f7] bg-[#f7faff] p-4 text-base outline-none focus:border-[#003399] focus:bg-white focus:ring-4 focus:ring-blue-100"
                   value={editForm.company || ""}
                   onChange={(e) =>
                     setEditForm({ ...editForm, company: e.target.value })
@@ -1557,7 +1782,7 @@ export default function Report() {
                 </label>
                 <input
                   type="text"
-                  className="w-full p-4 bg-slate-50 rounded-2xl border-2 border-transparent focus:border-indigo-500 outline-none"
+                  className="w-full rounded-2xl border-2 border-[#d8e4f7] bg-[#f7faff] p-4 text-base outline-none focus:border-[#003399] focus:bg-white focus:ring-4 focus:ring-blue-100"
                   value={editForm.contact_person || ""}
                   onChange={(e) =>
                     setEditForm({ ...editForm, contact_person: e.target.value })
@@ -1571,7 +1796,7 @@ export default function Report() {
                     วัตถุประสงค์ในการติดต่อ
                   </label>
                   <select
-                    className="w-full p-4 bg-slate-50 rounded-2xl border-2 border-transparent focus:border-indigo-500 outline-none"
+                    className="w-full rounded-2xl border-2 border-[#d8e4f7] bg-[#f7faff] p-4 text-base outline-none focus:border-[#003399] focus:bg-white focus:ring-4 focus:ring-blue-100"
                     value={editForm.purpose || ""}
                     onChange={(e) =>
                       setEditForm({
@@ -1601,7 +1826,7 @@ export default function Report() {
                     </label>
                     <input
                       type="text"
-                      className="w-full p-4 bg-slate-50 rounded-2xl border-2 border-transparent focus:border-indigo-500 outline-none"
+                      className="w-full rounded-2xl border-2 border-[#d8e4f7] bg-[#f7faff] p-4 text-base outline-none focus:border-[#003399] focus:bg-white focus:ring-4 focus:ring-blue-100"
                       value={editForm.other_purpose || ""}
                       onChange={(e) =>
                         setEditForm({
@@ -1621,7 +1846,7 @@ export default function Report() {
                   </label>
                   <input
                     type="datetime-local"
-                    className="w-full p-4 bg-slate-50 rounded-2xl border-2 border-transparent focus:border-indigo-500 outline-none font-mono"
+                    className="w-full rounded-2xl border-2 border-[#d8e4f7] bg-[#f7faff] p-4 text-base outline-none focus:border-[#003399] focus:bg-white focus:ring-4 focus:ring-blue-100"
                     value={editForm.checkin_time || ""}
                     onChange={(e) =>
                       setEditForm({ ...editForm, checkin_time: e.target.value })
@@ -1634,7 +1859,7 @@ export default function Report() {
                   </label>
                   <input
                     type="datetime-local"
-                    className="w-full p-4 bg-slate-50 rounded-2xl border-2 border-transparent focus:border-indigo-500 outline-none font-mono"
+                    className="w-full rounded-2xl border-2 border-[#d8e4f7] bg-[#f7faff] p-4 text-base outline-none focus:border-[#003399] focus:bg-white focus:ring-4 focus:ring-blue-100"
                     value={editForm.checkout_time || ""}
                     onChange={(e) =>
                       setEditForm({
@@ -1646,7 +1871,7 @@ export default function Report() {
                 </div>
               </div>
             </div>
-            <div className="p-8 bg-slate-50 flex gap-3">
+            <div className="flex gap-3 bg-[#f7faff] p-6 sm:p-8">
               <button
                 onClick={() => setEditingId(null)}
                 className="flex-1 py-4 font-bold text-slate-500"
@@ -1655,7 +1880,7 @@ export default function Report() {
               </button>
               <button
                 onClick={saveEdit}
-                className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg hover:bg-indigo-700 transition-all"
+                className="flex-1 rounded-2xl bg-[#003399] py-4 text-base font-semibold text-white shadow-lg transition-all hover:bg-[#004ecc]"
               >
                 บันทึกการแก้ไข
               </button>

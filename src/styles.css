@@ -369,8 +369,8 @@
     transition: all 0.2s ease-in-out;
   }
 
-  /* Hover effect */
-  tr:hover {
+  /* Hover เฉพาะแถวข้อมูล ไม่กระทบหัวตาราง */
+  tbody tr:hover {
     background-color: #f9fafb;
   }
 
