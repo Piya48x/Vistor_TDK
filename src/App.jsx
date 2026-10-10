@@ -857,11 +857,11 @@ useEffect(() => {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap');
         :root { 
-          --tdk-blue: #003399; 
-          --tdk-blue-light: #004ecc; 
+          --tdk-blue: #0046AD; 
+          --tdk-blue-light: #0046AD; 
           --tdk-bg: #f0f4f8; 
           --text-main: #1a2b49; 
-          --card-shadow: 0 20px 40px rgba(0, 51, 153, 0.1);
+          --card-shadow: 0 20px 40px rgba(0, 70, 173, 0.14);
         }
         body { 
           margin: 0; 
@@ -898,7 +898,7 @@ useEffect(() => {
   align-items: center;
   gap: 8px;
   background: white;
-  border: 1px solid rgba(0, 51, 153, 0.2);
+  border: 1px solid rgba(0, 70, 173, 0.25);
   border-radius: 12px;
   padding: 10px 16px;
   font-size: 18px;
@@ -913,7 +913,7 @@ useEffect(() => {
   background: #f8fafc;
   border-color: var(--tdk-blue);
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 51, 153, 0.15);
+  box-shadow: 0 6px 16px rgba(0, 70, 173, 0.18);
 }
 
 .lang-arrow {

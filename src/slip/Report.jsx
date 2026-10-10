@@ -13,7 +13,6 @@ import {
   UserCircle,
   RotateCcw,
   Loader2,
-  Filter,
   Briefcase,
   ChevronRight,
   X,
@@ -101,17 +100,6 @@ function normalizePurpose(purpose) {
 
   return found ? found[0] : "other";
 }
-const filterStyles = {
-  TODAY: "bg-[#003399] border-[#003399] text-white shadow-lg shadow-blue-900/15",
-  STAYING:
-    "bg-rose-600 border-rose-400 text-white shadow-lg shadow-rose-500/30",
-  CHECKOUT_TODAY:
-    "bg-emerald-600 border-emerald-400 text-white shadow-lg shadow-emerald-500/30",
-  ALL: "bg-[#003399] border-[#003399] text-white shadow-lg shadow-blue-900/15",
-  CUSTOM:
-    "bg-[#004ecc] border-[#004ecc] text-white shadow-lg shadow-blue-900/15",
-};
-
 const PURPOSES = [
   { value: "meeting", label: "ประชุมงาน" },
   { value: "delivery", label: "ส่งของ / รับของ" },
@@ -174,6 +162,9 @@ export default function Report() {
   const [searchStart, setSearchStart] = useState("");
   const [searchEnd, setSearchEnd] = useState("");
   const [searchName, setSearchName] = useState("");
+  const [searchSuggestions, setSearchSuggestions] = useState([]);
+  const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [activeFilter, setActiveFilter] = useState("TODAY");
   const [summary, setSummary] = useState({
     today: 0,
@@ -404,6 +395,56 @@ export default function Report() {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [isSidebarCollapsed]);
+
+  useEffect(() => {
+    const keyword = searchName.replaceAll(",", " ").trim();
+
+    if (keyword.length < 2) {
+      setSearchSuggestions([]);
+      setIsLoadingSuggestions(false);
+      return undefined;
+    }
+
+    let isCancelled = false;
+    setIsLoadingSuggestions(true);
+
+    const timer = setTimeout(async () => {
+      const { data, error } = await supabase
+        .from("visitors")
+        .select("id, full_name, company, contact_person, phone")
+        .or(
+          `full_name.ilike.%${keyword}%,company.ilike.%${keyword}%,contact_person.ilike.%${keyword}%,phone.ilike.%${keyword}%`
+        )
+        .order("id", { ascending: false })
+        .limit(12);
+
+      if (isCancelled) return;
+
+      if (error) {
+        setSearchSuggestions([]);
+      } else {
+        const uniqueSuggestions = (data || []).filter(
+          (item, index, items) =>
+            index ===
+            items.findIndex(
+              (candidate) =>
+                candidate.full_name === item.full_name &&
+                candidate.company === item.company &&
+                candidate.contact_person === item.contact_person &&
+                candidate.phone === item.phone
+            )
+        );
+        setSearchSuggestions(uniqueSuggestions.slice(0, 8));
+      }
+
+      setIsLoadingSuggestions(false);
+    }, 250);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [searchName]);
 
   const handleCheckOut = async (id) => {
     await supabase
@@ -690,7 +731,7 @@ export default function Report() {
       value: summary.today,
       hint: "Check-in ทั้งหมด",
       icon: Users,
-      accent: "text-[#003399] bg-[#eef4ff] border-[#cbdcff]",
+      accent: "text-[#0046AD] bg-[#eef4ff] border-[#cbdcff]",
     },
     {
       id: "STAYING",
@@ -715,7 +756,7 @@ export default function Report() {
       value: summary.all,
       hint: "สะสมในระบบ",
       icon: ClipboardList,
-      accent: "text-[#003399] bg-[#eef4ff] border-[#cbdcff]",
+      accent: "text-[#0046AD] bg-[#eef4ff] border-[#cbdcff]",
     },
   ];
   const quickFilters = [
@@ -728,63 +769,51 @@ export default function Report() {
   return (
     <div
       className={`report-shell relative min-h-screen pb-20 text-[#1a2b49] ${
-        isDarkMode ? "report-dark bg-[#07152d]" : "bg-[#f0f4f8]"
+        isDarkMode ? "report-dark bg-[#13243a]" : "bg-[#f0f4f8]"
       }`}
       style={{
         backgroundImage: isDarkMode
-          ? "radial-gradient(circle at 8% 0%, rgba(43, 103, 210, 0.22), transparent 30%), radial-gradient(circle at 92% 10%, rgba(0, 78, 204, 0.14), transparent 28%)"
+          ? "radial-gradient(circle at 8% 0%, rgba(38, 91, 174, 0.30), transparent 32%), radial-gradient(circle at 92% 10%, rgba(0, 51, 153, 0.22), transparent 30%)"
           : "radial-gradient(circle at 8% 0%, rgba(0, 51, 153, 0.08), transparent 28%), radial-gradient(circle at 92% 10%, rgba(0, 78, 204, 0.07), transparent 25%)",
       }}
     >
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai+Looped:wght@400;500;600;700&display=swap');
         .report-shell,
         .report-shell button,
         .report-shell input,
         .report-shell select {
-          font-family: 'Kanit', sans-serif;
+          font-family: 'Noto Sans Thai Looped', sans-serif;
         }
         .report-shell {
           transition: background-color 180ms ease, color 180ms ease;
         }
-        .report-dark [class*="bg-white"],
-        .report-dark [class*="bg-[#f7faff]"] {
-          background-color: #0f2344 !important;
+        .report-shell [class~="bg-[#003399]"],
+        .report-shell [class~="bg-blue-500"],
+        .report-shell [class~="bg-blue-600"] {
+          background-color: #0046AD !important;
         }
-        .report-dark [class*="bg-[#eef4ff]"],
-        .report-dark [class*="bg-blue-50"],
-        .report-dark [class*="bg-slate-50"] {
-          background-color: #142d54 !important;
+        .report-shell [class~="text-[#003399]"],
+        .report-shell [class~="text-blue-600"],
+        .report-shell [class~="text-sky-600"] {
+          color: #0046AD !important;
         }
-        .report-dark [class*="border-blue-100"],
-        .report-dark [class*="border-[#d8e4f7]"],
-        .report-dark [class*="border-slate-200"],
-        .report-dark [class*="border-slate-100"] {
-          border-color: #294a75 !important;
+        .report-shell [class~="border-[#003399]"],
+        .report-shell [class~="border-[#002a80]"] {
+          border-color: #0046AD !important;
         }
-        .report-dark [class*="text-[#1a2b49]"],
-        .report-dark [class*="text-slate-900"],
-        .report-dark [class*="text-slate-800"],
-        .report-dark [class*="text-slate-700"] {
-          color: #edf4ff !important;
+        .report-shell [class~="accent-[#003399]"] {
+          accent-color: #0046AD !important;
         }
-        .report-dark [class*="text-[#003399]"] {
-          color: #91b7ff !important;
+        .report-shell [class~="hover:bg-[#004ecc]"]:hover,
+        .report-shell [class~="hover:bg-blue-700"]:hover,
+        .report-shell [class~="hover:bg-sky-50"]:hover {
+          background-color: #0046AD !important;
+          filter: brightness(0.94);
         }
-        .report-dark [class*="text-[#315184]"],
-        .report-dark [class*="text-[#5f7394]"],
-        .report-dark [class*="text-[#6d87ad]"],
-        .report-dark [class*="text-slate-600"],
-        .report-dark [class*="text-slate-500"],
-        .report-dark [class*="text-slate-400"] {
-          color: #b8c9e5 !important;
-        }
-        .report-dark input,
-        .report-dark select {
-          color-scheme: dark;
-        }
-        .report-dark tbody tr:hover {
-          background-color: #142d54 !important;
+        .report-shell [class~="hover:border-[#003399]"]:hover,
+        .report-shell [class~="focus:border-[#003399]"]:focus {
+          border-color: #0046AD !important;
         }
       `}</style>
       {/* Loading Overlay */}
@@ -1014,37 +1043,222 @@ export default function Report() {
         </aside>
 
         <main className="flex w-full min-w-0 flex-1 flex-col gap-4">
-        <div className="order-0 flex min-h-12 items-center justify-between gap-3 rounded-[18px] border border-blue-100 bg-white px-3 py-2 shadow-[0_8px_22px_rgba(0,51,153,0.06)]">
-          <div className="flex min-w-0 items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setIsSidebarCollapsed(false)}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#003399] px-4 text-sm font-semibold text-white transition hover:bg-[#004ecc]"
-              aria-label="เปิด Sidebar"
-              aria-expanded={!isSidebarCollapsed}
-            >
-              <ChevronRight size={18} /> เมนู
-            </button>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-[#003399] sm:text-base">
-                รายงานผู้มาติดต่อ
-              </p>
-              <p className="hidden text-xs text-[#5f7394] sm:block">
-                TDK INDUSTRIAL
-              </p>
+        <section className="order-0 space-y-3 rounded-[20px] border border-blue-100 bg-white p-3 shadow-[0_8px_22px_rgba(0,51,153,0.06)]">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+            <div className="flex min-w-0 items-center gap-3 xl:mr-auto">
+              <button
+                type="button"
+                onClick={() => setIsSidebarCollapsed(false)}
+                className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#003399] px-4 text-sm font-semibold text-white transition hover:bg-[#004ecc]"
+                aria-label="เปิด Sidebar"
+                aria-expanded={!isSidebarCollapsed}
+              >
+                ☰
+              </button>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-[#003399] sm:text-base">
+                  รายงานผู้มาติดต่อ
+                </p>
+                <p className="truncate text-xs text-[#5f7394]">
+                  {getFilterStatusText(activeFilter)} · {visitors.length} รายการ
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {quickFilters.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveFilter(item.id);
+                      loadVisitors(item.id);
+                    }}
+                    className={`inline-flex min-h-10 items-center gap-2 rounded-xl border-2 px-3 py-2 text-sm font-semibold transition-colors ${
+                      activeFilter === item.id
+                        ? "border-[#003399] bg-[#003399] text-white shadow-[0_6px_14px_rgba(0,51,153,0.18)]"
+                        : "border-[#d8e4f7] bg-[#f7faff] text-[#315184] hover:border-[#003399] hover:bg-white"
+                    }`}
+                  >
+                    <Icon size={16} /> {item.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex shrink-0 gap-2 overflow-x-auto pb-1 xl:pb-0">
+              <button
+                onClick={() => exportToExcel(selectedIds)}
+                disabled={selectedIds.length === 0}
+                className={`inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold transition-colors ${
+                  selectedIds.length > 0
+                    ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                    : "cursor-not-allowed bg-[#edf1f7] text-[#8d9bb0]"
+                }`}
+              >
+                <Download size={16} /> Export ({selectedIds.length})
+              </button>
+              {selectedIds.length > 0 && (
+                <button
+                  onClick={deleteSelected}
+                  className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-rose-600 px-3 text-sm font-semibold text-white hover:bg-rose-700"
+                >
+                  <Trash2 size={16} /> ลบ
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => navigate("/")}
+                className="inline-flex min-h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl border-2 border-[#003399] bg-white px-3 text-sm font-semibold text-[#003399] transition hover:bg-[#eef4ff]"
+              >
+                <UserCheck size={16} /> ลงทะเบียนผู้ติดต่อ
+              </button>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 border-[#d8e4f7] bg-[#f7faff] text-[#003399] transition hover:border-[#003399]"
+                title={isDarkMode ? "เปลี่ยนเป็นธีมสว่าง" : "เปลี่ยนเป็นธีมมืด"}
+                aria-label={isDarkMode ? "เปลี่ยนเป็นธีมสว่าง" : "เปลี่ยนเป็นธีมมืด"}
+                aria-pressed={isDarkMode}
+              >
+                {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+              </button>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 border-[#d8e4f7] bg-[#f7faff] text-[#003399] transition hover:border-[#003399]"
-            title={isDarkMode ? "เปลี่ยนเป็นธีมสว่าง" : "เปลี่ยนเป็นธีมมืด"}
-            aria-label={isDarkMode ? "เปลี่ยนเป็นธีมสว่าง" : "เปลี่ยนเป็นธีมมืด"}
-            aria-pressed={isDarkMode}
-          >
-            {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
-        </div>
+
+          <div className="grid grid-cols-1 items-stretch gap-2 lg:grid-cols-[minmax(280px,1fr)_165px_165px_minmax(160px,auto)]">
+            <div className="relative h-11">
+              <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#5071a5]" />
+              <input
+                type="text"
+                placeholder="ค้นหาชื่อ บริษัท ผู้ติดต่อ หรือเบอร์โทร"
+                value={searchName}
+                onChange={(e) => {
+                  setSearchName(e.target.value);
+                  setShowSearchSuggestions(true);
+                }}
+                onFocus={() => setShowSearchSuggestions(true)}
+                onBlur={() => setShowSearchSuggestions(false)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    setShowSearchSuggestions(false);
+                    setActiveFilter("CUSTOM");
+                    loadVisitors("CUSTOM");
+                  }
+                  if (e.key === "Escape") setShowSearchSuggestions(false);
+                }}
+                role="combobox"
+                aria-label="ค้นหาผู้มาติดต่อ"
+                aria-autocomplete="list"
+                aria-expanded={showSearchSuggestions && searchName.trim().length >= 2}
+                className="h-11 w-full rounded-xl border-2 border-[#d8e4f7] bg-[#f7faff] pl-11 pr-4 text-sm text-[#1a2b49] outline-none transition placeholder:text-[#8494ad] focus:border-[#003399] focus:bg-white focus:ring-4 focus:ring-blue-100"
+              />
+              {showSearchSuggestions && searchName.trim().length >= 2 && (
+                <div
+                  className="absolute left-0 right-0 top-[calc(100%+6px)] z-[60] max-h-80 overflow-y-auto rounded-2xl border border-blue-100 bg-white p-2 shadow-[0_18px_45px_rgba(0,51,153,0.18)]"
+                  role="listbox"
+                >
+                  {isLoadingSuggestions ? (
+                    <div className="flex items-center justify-center gap-2 px-4 py-5 text-sm font-medium text-[#5f7394]">
+                      <Loader2 size={17} className="animate-spin text-[#003399]" />
+                      กำลังค้นหา...
+                    </div>
+                  ) : searchSuggestions.length > 0 ? (
+                    searchSuggestions.map((suggestion) => {
+                      const suggestionValue =
+                        suggestion.full_name ||
+                        suggestion.company ||
+                        suggestion.contact_person ||
+                        suggestion.phone ||
+                        "";
+
+                      return (
+                        <button
+                          key={suggestion.id}
+                          type="button"
+                          role="option"
+                          aria-selected="false"
+                          onMouseDown={(event) => {
+                            event.preventDefault();
+                            setSearchName(suggestionValue);
+                            setShowSearchSuggestions(false);
+                          }}
+                          className="flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-[#eef4ff]"
+                        >
+                          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#eef4ff] text-[#003399]">
+                            <UserCircle size={18} />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-semibold text-[#1a2b49]">
+                              {suggestion.full_name || "ไม่ระบุชื่อ"}
+                            </span>
+                            <span className="block truncate text-xs text-[#5f7394]">
+                              {[suggestion.company, suggestion.contact_person, suggestion.phone]
+                                .filter(Boolean)
+                                .join(" · ") || "ไม่มีรายละเอียดเพิ่มเติม"}
+                            </span>
+                          </span>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="px-4 py-5 text-center text-sm font-medium text-[#5f7394]">
+                      ไม่พบข้อมูลที่ใกล้เคียง
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <label className="m-0 block h-11">
+              <span className="sr-only">ตั้งแต่วันที่</span>
+              <input
+                type="date"
+                value={searchStart}
+                onChange={(e) => setSearchStart(e.target.value)}
+                className="block h-full w-full rounded-xl border-2 border-[#d8e4f7] bg-[#f7faff] px-3 text-sm font-medium text-[#1a2b49] outline-none focus:border-[#003399] focus:bg-white"
+              />
+            </label>
+            <label className="m-0 block h-11">
+              <span className="sr-only">ถึงวันที่</span>
+              <input
+                type="date"
+                value={searchEnd}
+                onChange={(e) => setSearchEnd(e.target.value)}
+                className="block h-full w-full rounded-xl border-2 border-[#d8e4f7] bg-[#f7faff] px-3 text-sm font-medium text-[#1a2b49] outline-none focus:border-[#003399] focus:bg-white"
+              />
+            </label>
+            <div className="flex h-11 flex-nowrap items-stretch gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSearchSuggestions(false);
+                  setActiveFilter("CUSTOM");
+                  loadVisitors("CUSTOM");
+                }}
+                className="inline-flex h-full min-w-[104px] flex-1 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[#003399] px-4 text-sm font-semibold text-white hover:bg-[#004ecc]"
+              >
+                <Search size={16} /> ค้นหา
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSearchSuggestions(false);
+                  setSearchName("");
+                  setSearchStart("");
+                  setSearchEnd("");
+                  loadVisitors("TODAY");
+                  setActiveFilter("TODAY");
+                }}
+                className="inline-flex h-full w-11 shrink-0 items-center justify-center rounded-xl border-2 border-[#d8e4f7] bg-white text-[#315184] hover:border-[#003399] hover:bg-[#f7faff]"
+                title="รีเซ็ต"
+                aria-label="รีเซ็ตการค้นหา"
+              >
+                <RotateCcw size={17} />
+              </button>
+            </div>
+          </div>
+        </section>
         {/* Stats Grid */}
         <div id="daily-summary" className="order-1 grid scroll-mt-6 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {summaryCards.map((item) => {
@@ -1338,153 +1552,6 @@ export default function Report() {
               </div>
             )}
           </aside>
-        </div>
-
-        {/* Command Bar */}
-        <div className="order-2 space-y-4 rounded-[22px] border border-blue-100 bg-white p-4 shadow-[0_10px_28px_rgba(0,51,153,0.07)]">
-          <div className="flex flex-col justify-between gap-3 xl:flex-row xl:items-center">
-            <div className="flex flex-wrap gap-2">
-              {quickFilters.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                      setActiveFilter(item.id);
-                      loadVisitors(item.id);
-                    }}
-                    className={`inline-flex min-h-10 items-center gap-2 rounded-xl border-2 px-4 py-2 text-sm font-semibold transition-colors ${
-                      activeFilter === item.id
-                        ? "border-[#003399] bg-[#003399] text-white shadow-[0_8px_18px_rgba(0,51,153,0.20)]"
-                        : "border-[#d8e4f7] bg-[#f7faff] text-[#315184] hover:border-[#003399] hover:bg-white"
-                    }`}
-                  >
-                    <Icon size={16} />
-                    {item.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => exportToExcel(selectedIds)}
-                disabled={selectedIds.length === 0}
-                className={`inline-flex min-h-10 items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
-                  selectedIds.length > 0
-                    ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                    : "cursor-not-allowed bg-[#edf1f7] text-[#8d9bb0]"
-                }`}
-              >
-                <Download size={16} />
-                Export ({selectedIds.length})
-              </button>
-              {selectedIds.length > 0 && (
-                <button
-                  onClick={deleteSelected}
-                  className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-black text-white hover:bg-rose-700"
-                >
-                  <Trash2 size={16} />
-                  ลบที่เลือก
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 items-end gap-3 lg:grid-cols-[minmax(300px,1fr)_180px_180px_auto]">
-            <label className="block">
-              <span className="mb-1 block text-xs font-semibold text-[#315184]">
-                ค้นหาผู้มาติดต่อ
-              </span>
-              <span className="relative block">
-                <Search
-                  size={21}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-[#5071a5]"
-                />
-                <input
-                  type="text"
-                  placeholder="ชื่อ บริษัท ผู้ติดต่อ หรือเบอร์โทร"
-                  value={searchName}
-                  onChange={(e) => setSearchName(e.target.value)}
-                  className="h-12 w-full rounded-xl border-2 border-[#d8e4f7] bg-[#f7faff] pl-12 pr-4 text-base font-normal text-[#1a2b49] outline-none transition placeholder:text-[#8494ad] focus:border-[#003399] focus:bg-white focus:ring-4 focus:ring-blue-100"
-                />
-              </span>
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-semibold text-[#315184]">
-                ตั้งแต่วันที่
-              </span>
-              <input
-                type="date"
-                value={searchStart}
-                onChange={(e) => setSearchStart(e.target.value)}
-                className="h-12 w-full rounded-xl border-2 border-[#d8e4f7] bg-[#f7faff] px-4 text-base font-medium text-[#1a2b49] outline-none transition focus:border-[#003399] focus:bg-white focus:ring-4 focus:ring-blue-100"
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-semibold text-[#315184]">
-                ถึงวันที่
-              </span>
-              <input
-                type="date"
-                value={searchEnd}
-                onChange={(e) => setSearchEnd(e.target.value)}
-                className="h-12 w-full rounded-xl border-2 border-[#d8e4f7] bg-[#f7faff] px-4 text-base font-medium text-[#1a2b49] outline-none transition focus:border-[#003399] focus:bg-white focus:ring-4 focus:ring-blue-100"
-              />
-            </label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  setActiveFilter("CUSTOM");
-                  loadVisitors("CUSTOM");
-                }}
-                className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#003399] px-5 text-base font-semibold text-white shadow-[0_6px_16px_rgba(0,51,153,0.18)] transition hover:bg-[#004ecc]"
-              >
-                <Search size={16} />
-                ค้นหา
-              </button>
-              <button
-                onClick={() => {
-                  setSearchName("");
-                  setSearchStart("");
-                  setSearchEnd("");
-                  loadVisitors("TODAY");
-                  setActiveFilter("TODAY");
-                }}
-                className="inline-flex h-12 w-12 items-center justify-center rounded-xl border-2 border-[#d8e4f7] bg-white text-[#315184] transition hover:border-[#003399] hover:bg-[#f7faff]"
-                title="รีเซ็ต"
-              >
-                <RotateCcw size={18} />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Table Results Bar */}
-        <div className="order-3 flex flex-col items-stretch justify-between gap-3 rounded-[18px] border border-blue-100 bg-white p-3 shadow-[0_8px_22px_rgba(0,51,153,0.06)] sm:flex-row sm:items-center">
-          <div
-            className={`flex items-center gap-3 rounded-xl border-2 px-4 py-2 transition-all duration-300 ease-in-out ${
-              filterStyles[activeFilter] ||
-              "border-blue-200 bg-blue-50 text-[#003399]"
-            }`}
-          >
-            <Filter size={16} className="opacity-70" />
-            <div className="flex flex-col">
-              <span className="text-[11px] font-medium uppercase tracking-wider opacity-75">
-                กำลังแสดงผล :
-              </span>
-              <span className="flex items-center gap-2 text-sm font-semibold">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-current"></span>
-                </span>
-                {getFilterStatusText(activeFilter)}
-              </span>
-            </div>
-          </div>
-          <div className="rounded-xl bg-[#eef4ff] px-4 py-2 text-sm font-medium text-[#315184]">
-            พบทั้งหมด <span className="mx-1 text-xl font-bold text-[#003399]">{visitors.length}</span> รายการ
-          </div>
         </div>
 
         {/* Main Table Content */}
