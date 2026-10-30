@@ -195,6 +195,141 @@ const translations = {
   }
 };
 
+const PRIVACY_NOTICE_VERSION =
+  import.meta.env.VITE_PRIVACY_NOTICE_VERSION || "2026-10-30";
+const PRIVACY_RETENTION_DAYS = Number(
+  import.meta.env.VITE_PRIVACY_RETENTION_DAYS || 90
+);
+const PRIVACY_CONTACT =
+  import.meta.env.VITE_PRIVACY_CONTACT ||
+  "เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล / ฝ่ายธุรการ ณ จุดรักษาความปลอดภัย";
+
+const privacyTranslations = {
+  th: {
+    eyebrow: "ก่อนเริ่มลงทะเบียนผู้มาติดต่อ",
+    title: "แบบยืนยันการรับทราบและให้ความยินยอมด้านข้อมูลส่วนบุคคล",
+    subtitle: "กรุณาอ่านประกาศนี้ก่อนเปิดกล้อง ถ่ายภาพเอกสาร หรือกรอกข้อมูล",
+    moreLink: "อ่านประกาศความเป็นส่วนตัวเพิ่มเติม",
+    quickCamera: "เปิดกล้องเมื่อยินยอมเท่านั้น",
+    quickRetention: `เก็บไม่เกิน ${PRIVACY_RETENTION_DAYS} วัน`,
+    quickNoMarketing: "ไม่ใช้ข้อมูลเพื่อการตลาด",
+    detailsTitle: "รายละเอียดการใช้ข้อมูล",
+    requiredBadge: "กรุณายืนยันก่อนดำเนินการ",
+    controller: "ผู้ควบคุมข้อมูลส่วนบุคคล",
+    controllerValue: "บริษัท ที.ดี.เค.อินดัสเตรียล จำกัด",
+    intro:
+      "บริษัทเคารพสิทธิความเป็นส่วนตัวของท่าน และจะเก็บ ใช้ หรือเปิดเผยข้อมูลเท่าที่จำเป็นสำหรับการเข้า–ออกพื้นที่และการรักษาความปลอดภัย",
+    dataTitle: "ข้อมูลที่เก็บรวบรวม",
+    dataText:
+      "ชื่อ–นามสกุล บริษัท เบอร์โทรศัพท์ ผู้ติดต่อ วัตถุประสงค์การเข้าพบ วัน–เวลาเข้าออก และภาพเอกสารที่ท่านเลือกถ่าย",
+    minimizeTitle: "โปรดปกปิดข้อมูลที่ไม่จำเป็นก่อนถ่ายภาพ",
+    minimizeText:
+      "เช่น เลขประจำตัวประชาชน วันเกิด ที่อยู่ ศาสนา หมู่เลือด และข้อมูลด้านหลังบัตร บริษัทไม่ประสงค์เก็บข้อมูลเหล่านี้เพื่อการลงทะเบียนทั่วไป",
+    purposeTitle: "วัตถุประสงค์และฐานการประมวลผล",
+    purposeText:
+      "เพื่อยืนยันตัวตน ลงทะเบียนผู้มาติดต่อ ควบคุมการเข้า–ออก ติดต่อประสานงาน ตรวจสอบเหตุด้านความปลอดภัย และปฏิบัติตามกฎหมาย โดยอาศัยความยินยอมสำหรับการถ่ายและจัดเก็บภาพเอกสาร และฐานกฎหมายอื่นที่เกี่ยวข้องสำหรับข้อมูลที่จำเป็นต่อการรักษาความปลอดภัย",
+    sharingTitle: "การเปิดเผยข้อมูล",
+    sharingText:
+      "เปิดเผยเฉพาะแก่เจ้าหน้าที่รักษาความปลอดภัย เจ้าหน้าที่ผู้รับผิดชอบ ผู้ให้บริการระบบที่อยู่ภายใต้ข้อตกลงคุ้มครองข้อมูล และหน่วยงานรัฐเมื่อกฎหมายกำหนด โดยไม่มีวัตถุประสงค์ทางการตลาด",
+    retentionTitle: "ระยะเวลาเก็บรักษา",
+    retentionText: `ไม่เกิน ${PRIVACY_RETENTION_DAYS} วันหลังสิ้นสุดการเข้าเยี่ยม เว้นแต่จำเป็นต้องเก็บต่อเพื่อปฏิบัติตามกฎหมาย ตรวจสอบเหตุ หรือใช้สิทธิเรียกร้อง เมื่อพ้นความจำเป็นจะลบหรือทำลายตามขั้นตอนที่เหมาะสม`,
+    rightsTitle: "สิทธิของท่าน",
+    rightsText:
+      "ท่านอาจขอเข้าถึง รับสำเนา แก้ไข ลบ จำกัดหรือคัดค้านการประมวลผล ถอนความยินยอม และร้องเรียนต่อสำนักงานคณะกรรมการคุ้มครองข้อมูลส่วนบุคคลได้ตามที่กฎหมายกำหนด การถอนความยินยอมไม่กระทบการประมวลผลที่ชอบด้วยกฎหมายก่อนถอน",
+    contactTitle: "ช่องทางติดต่อและใช้สิทธิ",
+    contactText: PRIVACY_CONTACT,
+    consequenceTitle: "หากไม่ยินยอม",
+    consequenceText:
+      "ระบบจะไม่เปิดกล้องและไม่เก็บภาพเอกสาร ท่านยังสามารถติดต่อเจ้าหน้าที่รักษาความปลอดภัยเพื่อสอบถามวิธีลงทะเบียนทางเลือกที่ใช้ข้อมูลเท่าที่จำเป็น",
+    noticeVersion: "เวอร์ชันประกาศ",
+    confirm:
+      "ข้าพเจ้าได้อ่านและรับทราบประกาศความเป็นส่วนตัว และยินยอมให้ถ่ายและจัดเก็บภาพเอกสารตามวัตถุประสงค์ข้างต้น",
+    accept: "ยินยอมและดำเนินการต่อ",
+    decline: "ไม่ยินยอม",
+    declinedTitle: "ระบบไม่ได้เปิดกล้องหรือเก็บข้อมูลของท่าน",
+    declinedText:
+      "กรุณาติดต่อเจ้าหน้าที่รักษาความปลอดภัยเพื่อขอวิธีลงทะเบียนทางเลือก หรือย้อนกลับเพื่ออ่านและตัดสินใจใหม่",
+    back: "ย้อนกลับไปอ่านประกาศ",
+    consentRequired: "กรุณาให้ความยินยอมก่อนดำเนินการ",
+  },
+  en: {
+    eyebrow: "Before visitor registration",
+    title: "Privacy Notice Acknowledgement and Consent",
+    subtitle: "Please read this notice before opening the camera, photographing a document, or entering information.",
+    moreLink: "Read the full Privacy Notice",
+    quickCamera: "Camera opens only after consent",
+    quickRetention: `Kept for up to ${PRIVACY_RETENTION_DAYS} days`,
+    quickNoMarketing: "Never used for marketing",
+    detailsTitle: "How we use your data",
+    requiredBadge: "Confirmation required to continue",
+    controller: "Data controller",
+    controllerValue: "T.D.K. Industrial Co., Ltd.",
+    intro: "We process only the personal data necessary for site access and security.",
+    dataTitle: "Data collected",
+    dataText: "Name, company, phone number, host, visit purpose, entry/exit times, and the document image you choose to capture.",
+    minimizeTitle: "Cover unnecessary data before taking a photo",
+    minimizeText: "For example: national ID number, date of birth, address, religion, blood type, and data on the back of the card.",
+    purposeTitle: "Purpose and legal basis",
+    purposeText: "Identity verification, visitor registration, access control, coordination, security incident review, and legal compliance. Consent applies to capturing and storing the document image; other applicable legal bases may apply to data necessary for security.",
+    sharingTitle: "Disclosure",
+    sharingText: "Only to authorized security and responsible personnel, contracted service providers, and government authorities when legally required. No marketing use.",
+    retentionTitle: "Retention",
+    retentionText: `Up to ${PRIVACY_RETENTION_DAYS} days after the visit, unless longer retention is necessary for legal compliance, incident review, or legal claims.`,
+    rightsTitle: "Your rights",
+    rightsText: "Subject to law, you may request access, a copy, correction, deletion, restriction, objection, withdraw consent, and lodge a complaint with the PDPC. Withdrawal does not affect prior lawful processing.",
+    contactTitle: "Contact and rights requests",
+    contactText: PRIVACY_CONTACT,
+    consequenceTitle: "If you decline",
+    consequenceText: "The camera will not open and no document image will be collected. Ask security personnel about an alternative registration method using only necessary data.",
+    noticeVersion: "Notice version",
+    confirm: "I have read and acknowledge the Privacy Notice and consent to the capture and storage of my document image for the purposes above.",
+    accept: "Consent and continue",
+    decline: "Decline",
+    declinedTitle: "The camera was not opened and no data was collected.",
+    declinedText: "Please contact security for an alternative registration method, or return to review this notice again.",
+    back: "Back to the notice",
+    consentRequired: "Please provide consent before continuing.",
+  },
+  ko: {
+    eyebrow: "방문자 등록 전",
+    title: "개인정보 처리 안내 확인 및 동의",
+    subtitle: "카메라를 열거나 서류를 촬영하고 정보를 입력하기 전에 안내문을 읽어 주세요.",
+    moreLink: "개인정보 처리 안내 자세히 보기",
+    quickCamera: "동의 후에만 카메라 실행",
+    quickRetention: `최대 ${PRIVACY_RETENTION_DAYS}일 보관`,
+    quickNoMarketing: "마케팅에 사용하지 않음",
+    detailsTitle: "개인정보 이용 상세",
+    requiredBadge: "계속하려면 확인해 주세요",
+    controller: "개인정보 처리자",
+    controllerValue: "T.D.K. Industrial Co., Ltd.",
+    intro: "사업장 출입과 보안에 필요한 최소한의 개인정보만 처리합니다.",
+    dataTitle: "수집 정보",
+    dataText: "성명, 회사, 전화번호, 담당자, 방문 목적, 출입 시간 및 사용자가 선택해 촬영한 서류 이미지",
+    minimizeTitle: "촬영 전 불필요한 정보를 가려 주세요",
+    minimizeText: "신분증 번호, 생년월일, 주소, 종교, 혈액형 및 카드 뒷면 정보 등은 가려 주세요.",
+    purposeTitle: "목적 및 처리 근거",
+    purposeText: "본인 확인, 방문 등록, 출입 통제, 연락, 보안 사고 확인 및 법적 의무 이행을 위해 처리합니다. 서류 이미지 촬영·보관에는 동의를 적용합니다.",
+    sharingTitle: "정보 제공",
+    sharingText: "권한 있는 보안·담당 직원, 계약상 보호 의무가 있는 시스템 제공자 및 법률상 요구되는 기관에만 제공합니다. 마케팅에는 사용하지 않습니다.",
+    retentionTitle: "보관 기간",
+    retentionText: `방문 종료 후 최대 ${PRIVACY_RETENTION_DAYS}일 동안 보관하며, 법적 의무·사고 조사·권리 행사에 필요한 경우 예외적으로 연장할 수 있습니다.`,
+    rightsTitle: "정보주체의 권리",
+    rightsText: "법률이 정한 범위에서 열람, 사본, 정정, 삭제, 처리 제한·반대, 동의 철회 및 PDPC 민원을 요청할 수 있습니다.",
+    contactTitle: "문의 및 권리 행사",
+    contactText: PRIVACY_CONTACT,
+    consequenceTitle: "동의하지 않는 경우",
+    consequenceText: "카메라가 열리지 않고 서류 이미지가 수집되지 않습니다. 보안 담당자에게 최소 정보만 사용하는 대체 등록 방법을 문의해 주세요.",
+    noticeVersion: "안내문 버전",
+    confirm: "개인정보 처리 안내를 읽고 확인했으며, 위 목적에 따른 서류 이미지 촬영 및 보관에 동의합니다.",
+    accept: "동의하고 계속",
+    decline: "동의하지 않음",
+    declinedTitle: "카메라를 열지 않았으며 정보를 수집하지 않았습니다.",
+    declinedText: "보안 담당자에게 대체 등록 방법을 문의하거나 안내문으로 돌아가 다시 확인해 주세요.",
+    back: "안내문으로 돌아가기",
+    consentRequired: "계속하려면 동의해 주세요.",
+  },
+};
+
 const PURPOSE_STORAGE_RULES = [
   ["meeting", ["meeting", "ประชุม"]],
   ["delivery", ["delivery", "ส่งสินค้า", "รับสินค้า", "ส่งของ", "รับของ"]],
@@ -458,7 +593,7 @@ const analyzeCardFrame = (source, canvas) => {
 };
 
 export default function App() {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraStatus, setCameraStatus] = useState("idle");
@@ -470,6 +605,10 @@ export default function App() {
   const [historyList, setHistoryList] = useState([]);
   const [language, setLanguage] = useState("th"); // 'th', 'en', 'ko'
   const t = translations[language];
+  const privacy = privacyTranslations[language];
+  const [consentChecked, setConsentChecked] = useState(false);
+  const [consentDeclined, setConsentDeclined] = useState(false);
+  const [consentRecord, setConsentRecord] = useState(null);
   const [isLangOpen, setIsLangOpen] = useState(false);
   const userAgent = typeof navigator === "undefined" ? "" : navigator.userAgent;
   const isLineBrowser = /Line\//i.test(userAgent) || /\bLIFF\b/i.test(userAgent);
@@ -546,7 +685,31 @@ useEffect(() => {
     return () => stopCamera();
   }, [step]);
 
+  const handleAcceptConsent = () => {
+    if (!consentChecked) return;
+
+    setConsentRecord({
+      givenAt: new Date().toISOString(),
+      noticeVersion: PRIVACY_NOTICE_VERSION,
+      method: "explicit_checkbox",
+    });
+    setConsentDeclined(false);
+    setStep(1);
+  };
+
+  const handleDeclineConsent = () => {
+    stopCamera();
+    setConsentChecked(false);
+    setConsentRecord(null);
+    setConsentDeclined(true);
+  };
+
   const startCamera = async () => {
+    if (!consentRecord) {
+      setStep(0);
+      alert(privacy.consentRequired);
+      return;
+    }
     resetCardDetection();
     setPhotoDataUrl("");
     setCameraError("");
@@ -633,6 +796,11 @@ useEffect(() => {
   };
 
   const openNativeCamera = () => {
+    if (!consentRecord) {
+      setStep(0);
+      alert(privacy.consentRequired);
+      return;
+    }
     resetCardDetection();
     stopCamera();
     setCameraActive(false);
@@ -785,6 +953,11 @@ useEffect(() => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!consentRecord) {
+      setStep(0);
+      alert(privacy.consentRequired);
+      return;
+    }
     setLoading(true);
 
     try {
@@ -801,6 +974,9 @@ useEffect(() => {
               form.other_purpose
             ),
             checkin_time: new Date().toISOString(),
+            consent_given_at: consentRecord.givenAt,
+            consent_notice_version: consentRecord.noticeVersion,
+            consent_method: consentRecord.method,
           },
         ])
         .select()
@@ -855,8 +1031,11 @@ useEffect(() => {
     setCameraActive(false);
     setCameraStatus("idle");
     setCameraError("");
+    setConsentChecked(false);
+    setConsentDeclined(false);
+    setConsentRecord(null);
     resetCardDetection();
-    setStep(1);
+    setStep(0);
   };
 
   const handleEditPhoto = () => {
@@ -1362,6 +1541,268 @@ useEffect(() => {
           gap: 8px; 
           margin-bottom: 25px; 
         }
+        .privacy-header {
+          text-align: center;
+          margin-bottom: 22px;
+          animation: privacyRise .55s cubic-bezier(.2,.8,.2,1) both;
+        }
+        .privacy-eyebrow {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          color: #0755bc;
+          background: #eaf3ff;
+          border: 1px solid #cfe3ff;
+          border-radius: 999px;
+          padding: 7px 12px;
+          font-size: 12px;
+          font-weight: 600;
+          margin-bottom: 12px;
+        }
+        .privacy-eyebrow::before {
+          content: "";
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: #16a34a;
+          box-shadow: 0 0 0 4px rgba(22,163,74,.12);
+        }
+        .privacy-header h2 {
+          margin: 0;
+          font-size: clamp(22px, 4.5vw, 30px);
+          line-height: 1.25;
+          letter-spacing: -.02em;
+        }
+        .privacy-header p {
+          color: #64748b;
+          margin: 9px 0 0;
+          line-height: 1.55;
+        }
+        .privacy-card { max-width: 650px; }
+        .privacy-intro {
+          padding: 17px 18px;
+          margin-bottom: 14px;
+          color: #334155;
+          background: #f8fafc;
+          border-left: 3px solid var(--tdk-blue);
+          border-radius: 4px 12px 12px 4px;
+          line-height: 1.6;
+          animation: privacyRise .55s .08s cubic-bezier(.2,.8,.2,1) both;
+        }
+        .privacy-intro p { margin: 0; }
+        .privacy-quick-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 10px;
+          margin-bottom: 14px;
+        }
+        .privacy-quick-item {
+          min-height: 82px;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          padding: 15px 12px;
+          text-align: center;
+          color: #334155;
+          background: #fff;
+          border: 1px solid #dfe5ec;
+          border-top: 3px solid #cbd5e1;
+          border-radius: 10px;
+          font-size: 13px;
+          font-weight: 600;
+          line-height: 1.35;
+          animation: privacyPop .45s cubic-bezier(.2,.8,.2,1) both;
+        }
+        .privacy-quick-item:first-child { border-top-color: var(--tdk-blue); }
+        .privacy-quick-item:nth-child(1) { animation-delay: .14s; }
+        .privacy-quick-item:nth-child(2) { animation-delay: .20s; }
+        .privacy-quick-item:nth-child(3) { animation-delay: .26s; }
+        .privacy-warning {
+          background: #fffaf0;
+          border: 1px solid #efd2a2;
+          border-radius: 10px;
+          padding: 15px 17px;
+          margin-bottom: 14px;
+          color: #5f4630;
+          animation: privacyRise .5s .3s cubic-bezier(.2,.8,.2,1) both;
+        }
+        .privacy-warning h3 { margin: 0 0 5px; color: #69461f; font-size: 14px; }
+        .privacy-warning p { margin: 0; font-size: 13px; line-height: 1.55; }
+        .privacy-notice {
+          padding: 15px;
+          border: 1px solid #e2e8f0;
+          border-radius: 16px;
+          background: #f8fafc;
+          color: #334155;
+          line-height: 1.65;
+          animation: privacyRise .5s .34s cubic-bezier(.2,.8,.2,1) both;
+        }
+        .privacy-controller {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 0 2px 12px;
+          margin-bottom: 10px;
+          border-bottom: 1px solid #e2e8f0;
+        }
+        .privacy-controller-label { color: #64748b; font-size: 12px; }
+        .privacy-controller-name { color: #172554; font-weight: 600; }
+        .privacy-controller-mark {
+          flex: 0 0 auto;
+          width: 32px;
+          height: 2px;
+          background: var(--tdk-blue);
+        }
+        .privacy-notice-title { margin: 0; color: #172554; font-size: 15px; }
+        .privacy-detail {
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          margin-top: 8px;
+          overflow: hidden;
+          transition: border-color .2s, box-shadow .2s;
+        }
+        .privacy-detail[open] {
+          border-color: #bfdbfe;
+          box-shadow: 0 4px 16px rgba(0,70,173,.07);
+        }
+        .privacy-detail summary {
+          display: flex;
+          align-items: center;
+          padding: 12px 13px;
+          color: #1e3a5f;
+          font-weight: 600;
+          cursor: pointer;
+          list-style: none;
+          user-select: none;
+        }
+        .privacy-detail summary::-webkit-details-marker { display: none; }
+        .privacy-detail summary::after {
+          content: "+";
+          margin-left: auto;
+          color: #64748b;
+          font-size: 20px;
+          font-weight: 300;
+          transition: transform .25s;
+        }
+        .privacy-detail[open] summary::after { transform: rotate(45deg); }
+        .privacy-detail-body {
+          padding: 0 14px 14px;
+          color: #526174;
+          font-size: 13px;
+          line-height: 1.65;
+          animation: privacyReveal .25s ease-out both;
+        }
+        .privacy-detail-body p { margin: 0 0 10px; }
+        .privacy-detail-body p:last-child { margin-bottom: 0; }
+        .privacy-notice-version {
+          display: block;
+          margin-top: 11px;
+          text-align: right;
+          color: #94a3b8;
+          font-size: 11px;
+        }
+        .privacy-consent-box {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          background: white;
+          border: 2px solid #dbe4f0;
+          border-radius: 16px;
+          padding: 16px;
+          margin: 16px 0 14px;
+          cursor: pointer;
+          line-height: 1.55;
+          transition: border-color .2s, background .2s, transform .2s, box-shadow .2s;
+          animation: privacyRise .5s .4s cubic-bezier(.2,.8,.2,1) both;
+        }
+        .privacy-consent-box:hover {
+          border-color: #93c5fd;
+          transform: translateY(-1px);
+        }
+        .privacy-consent-box.is-checked {
+          background: #eff6ff;
+          border-color: var(--tdk-blue);
+          box-shadow: 0 6px 20px rgba(0,70,173,.10);
+        }
+        .privacy-consent-box:focus-within { border-color: var(--tdk-blue); }
+        .privacy-consent-box input {
+          flex: 0 0 auto;
+          width: 22px;
+          height: 22px;
+          margin: 2px 0 0;
+          accent-color: var(--tdk-blue);
+        }
+        .privacy-consent-copy { display: grid; gap: 4px; }
+        .privacy-consent-copy small { color: #64748b; font-size: 11px; }
+        .privacy-actions {
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 10px;
+          animation: privacyRise .5s .46s cubic-bezier(.2,.8,.2,1) both;
+        }
+        .privacy-actions .btn-action { min-height: 54px; padding: 14px 18px; }
+        .privacy-actions .btn-decline { width: auto; min-width: 116px; }
+        .privacy-actions .btn-tdk:not(:disabled) {
+          background: linear-gradient(135deg, #0046ad, #0878e4);
+          box-shadow: 0 10px 24px rgba(0,70,173,.22);
+        }
+        .btn-action:disabled {
+          cursor: not-allowed;
+          opacity: .48;
+          transform: none;
+        }
+        .btn-decline {
+          background: white;
+          color: #334155;
+          border: 1.5px solid #94a3b8;
+        }
+        .privacy-declined {
+          text-align: center;
+          padding: 32px 8px 12px;
+        }
+        .privacy-declined-icon {
+          display: grid;
+          place-items: center;
+          width: 68px;
+          height: 68px;
+          margin: 0 auto 16px;
+          border-radius: 50%;
+          background: #e2e8f0;
+          color: #475569;
+          font-size: 32px;
+        }
+        @keyframes privacyRise {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes privacyPop {
+          from { opacity: 0; transform: translateY(10px) scale(.96); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes privacyReveal {
+          from { opacity: 0; transform: translateY(-4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @media (max-width: 520px) {
+          .privacy-quick-grid { grid-template-columns: 1fr; gap: 8px; }
+          .privacy-quick-item {
+            min-height: auto;
+            justify-content: flex-start;
+            text-align: left;
+            padding: 11px 13px;
+          }
+          .privacy-actions { grid-template-columns: 1fr; }
+          .privacy-actions .btn-decline { width: 100%; }
+          .privacy-detail-body { padding-left: 14px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .privacy-header, .privacy-intro, .privacy-quick-item,
+          .privacy-warning, .privacy-notice, .privacy-consent-box,
+          .privacy-actions, .privacy-detail-body { animation: none !important; }
+          .privacy-detail summary::after, .privacy-consent-box { transition: none; }
+        }
         .step-dot { 
           width: 10px; 
           height: 10px; 
@@ -1396,6 +1837,267 @@ useEffect(() => {
           from { opacity: 0; transform: translateY(10px); } 
           to { opacity: 1; transform: translateY(0); } 
         }
+
+        /* Original PDPA consent layout */
+        .privacy-first .privacy-header {
+          text-align: center;
+          margin-bottom: 20px;
+        }
+        .privacy-first .privacy-eyebrow {
+          display: block;
+          padding: 0;
+          margin-bottom: 7px;
+          color: var(--tdk-blue);
+          background: transparent;
+          border: 0;
+          border-radius: 0;
+          font-size: 13px;
+          font-weight: 600;
+          letter-spacing: .04em;
+        }
+        .privacy-first .privacy-eyebrow::before { display: none; }
+        .privacy-first .privacy-header h2 {
+          margin: 0;
+          font-size: clamp(20px, 4vw, 26px);
+          line-height: 1.35;
+        }
+        .privacy-first .privacy-header p {
+          margin: 8px 0 0;
+          color: #64748b;
+          line-height: 1.55;
+        }
+        .privacy-card { max-width: 500px; }
+        .privacy-first .privacy-notice {
+          max-height: 430px;
+          overflow-y: auto;
+          padding: 20px;
+          border: 1px solid #dbe4f0;
+          border-radius: 18px;
+          background: #f8fafc;
+          color: #334155;
+          line-height: 1.65;
+          scrollbar-width: thin;
+          scrollbar-color: #94a3b8 transparent;
+        }
+        .privacy-first .privacy-controller {
+          display: block;
+          padding: 12px 14px;
+          margin-bottom: 14px;
+          background: white;
+          border: 0;
+          border-left: 4px solid var(--tdk-blue);
+          border-radius: 10px;
+        }
+        .privacy-first .privacy-controller-label {
+          color: #334155;
+          font-size: inherit;
+          font-weight: 600;
+        }
+        .privacy-first .privacy-controller-name {
+          color: #334155;
+          font-weight: 400;
+        }
+        .privacy-first .privacy-notice > p { margin: 0 0 14px; }
+        .privacy-first .privacy-section { margin: 0 0 16px; }
+        .privacy-first .privacy-section:last-of-type { margin-bottom: 0; }
+        .privacy-first .privacy-section h3 {
+          margin: 0 0 4px;
+          color: #172554;
+          font-size: 15px;
+        }
+        .privacy-first .privacy-section p { margin: 0; }
+        .privacy-first .privacy-warning {
+          padding: 12px 14px;
+          background: #fff7ed;
+          border: 1px solid #fed7aa;
+          border-radius: 12px;
+        }
+        .privacy-first .privacy-consent-box {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          margin: 18px 0 14px;
+          padding: 16px;
+          background: white;
+          border: 2px solid #dbe4f0;
+          border-radius: 16px;
+          box-shadow: none;
+          cursor: pointer;
+          line-height: 1.55;
+        }
+        .privacy-first .privacy-consent-box:hover { transform: none; }
+        .privacy-first .privacy-consent-box.is-checked {
+          background: #eff6ff;
+          border-color: var(--tdk-blue);
+          box-shadow: 0 6px 20px rgba(0,70,173,.10);
+        }
+        .privacy-first .privacy-consent-copy { display: block; }
+        .privacy-first .privacy-consent-copy strong { display: none; }
+        .privacy-first .privacy-actions {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 10px;
+        }
+        .privacy-first .privacy-actions .btn-action {
+          width: 100%;
+          min-height: 60px;
+          border-radius: 18px;
+        }
+        .privacy-first .privacy-actions .btn-decline {
+          width: 100%;
+          color: #334155;
+          background: white;
+          border: 1.5px solid #94a3b8;
+        }
+
+        /* Compact consent layout inspired by a familiar corporate form pattern */
+        .privacy-mode {
+          padding-top: 92px;
+          background: #f3f6fa;
+        }
+        .privacy-mode .brand-header {
+          position: fixed;
+          inset: 0 0 auto 0;
+          z-index: 900;
+          width: 100%;
+          max-width: none;
+          min-height: 64px;
+          display: flex;
+          align-items: center;
+          justify-content: flex-start;
+          margin: 0;
+          padding: 0 28px;
+          background: white;
+          border-bottom: 1px solid #e5e7eb;
+          box-shadow: 0 1px 4px rgba(15,23,42,.04);
+          text-align: left;
+        }
+        .privacy-mode .brand-header .logo-text {
+          font-size: clamp(20px, 3vw, 25px);
+          letter-spacing: -.02em;
+        }
+        .privacy-mode .brand-header .site-badge { display: none; }
+        .privacy-mode .language-switcher { top: 10px; right: 22px; }
+        .privacy-mode .lang-current {
+          min-width: 58px;
+          height: 44px;
+          padding: 7px 12px;
+          border-radius: 999px;
+          box-shadow: none;
+        }
+        .privacy-mode .privacy-card {
+          max-width: 720px;
+          background: #f4f4f4;
+          border-radius: 24px;
+          box-shadow: none;
+        }
+        .privacy-mode .card-body { padding: 28px; }
+        .privacy-mode .privacy-header { margin-bottom: 22px; }
+        .privacy-mode .privacy-eyebrow { display: none; }
+        .privacy-mode .privacy-header h2 {
+          max-width: 600px;
+          margin: 0 auto;
+          color: #101828;
+          font-size: clamp(20px, 4vw, 27px);
+          line-height: 1.45;
+        }
+        .privacy-mode .privacy-header p {
+          color: #667085;
+          font-size: 15px;
+        }
+        .privacy-mode .privacy-notice {
+          height: 330px;
+          overflow-y: auto;
+          padding: 24px 26px;
+          background: #fff;
+          border: none;
+          border-radius: 20px;
+          box-shadow: none;
+          scrollbar-width: thin;
+          scrollbar-color: #98a2b3 transparent;
+        }
+        .privacy-mode .privacy-notice::-webkit-scrollbar { width: 6px; }
+        .privacy-mode .privacy-notice::-webkit-scrollbar-thumb {
+          background: #98a2b3;
+          border-radius: 999px;
+        }
+        .privacy-form-title {
+          margin: 0 0 14px;
+          color: #101828;
+          font-size: 20px;
+          line-height: 1.55;
+        }
+        .privacy-form-intro {
+          margin: 0 0 18px;
+          color: #667085;
+          line-height: 1.75;
+        }
+        .privacy-form-section {
+          margin-top: 18px;
+          padding-top: 17px;
+          border-top: 1px solid #eaecf0;
+        }
+        .privacy-form-section h3 {
+          margin: 0 0 7px;
+          color: #344054;
+          font-size: 15px;
+        }
+        .privacy-form-section p {
+          margin: 0;
+          color: #667085;
+          line-height: 1.7;
+        }
+        .privacy-more-link {
+          display: block;
+          width: fit-content;
+          margin: 15px auto;
+          color: #111827;
+          font-size: 14px;
+          text-decoration: underline;
+          text-underline-offset: 3px;
+        }
+        .privacy-mode .privacy-consent-box {
+          margin: 0 0 14px;
+          padding: 17px 18px;
+          background: white;
+          border: 1px solid transparent;
+          border-radius: 18px;
+          box-shadow: none;
+        }
+        .privacy-mode .privacy-consent-box:hover { transform: none; }
+        .privacy-mode .privacy-consent-box.is-checked {
+          background: #fff;
+          border-color: var(--tdk-blue);
+          box-shadow: 0 0 0 3px rgba(0,70,173,.08);
+        }
+        .privacy-mode .privacy-consent-copy { display: block; }
+        .privacy-mode .privacy-consent-copy strong { display: none; }
+        .privacy-mode .privacy-actions {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 10px;
+        }
+        .privacy-mode .privacy-actions .btn-action {
+          width: 100%;
+          min-height: 50px;
+          border-radius: 999px;
+          font-size: 16px;
+        }
+        .privacy-mode .privacy-actions .btn-tdk:not(:disabled) {
+          background: var(--tdk-blue);
+          box-shadow: none;
+        }
+        .privacy-mode .privacy-actions .btn-tdk:disabled {
+          background: #aeb4bd;
+          color: white;
+          opacity: 1;
+        }
+        .privacy-mode .privacy-actions .btn-decline {
+          width: 100%;
+          border: 1.5px solid #344054;
+          color: #101828;
+          background: transparent;
+        }
         
         /* Responsive Styles */
         @media (max-width: 640px) {
@@ -1424,6 +2126,19 @@ useEffect(() => {
           .brand-header {
             margin: 10px 0 20px;
           }
+          .privacy-mode { padding: 78px 10px 20px; }
+          .privacy-mode .brand-header {
+            min-height: 58px;
+            padding: 0 15px;
+          }
+          .privacy-mode .language-switcher { top: 8px; right: 12px; }
+          .privacy-mode .privacy-card { border-radius: 20px; }
+          .privacy-mode .card-body { padding: 18px 14px; }
+          .privacy-mode .privacy-notice {
+            height: 310px;
+            padding: 20px 18px;
+            border-radius: 18px;
+          }
         }
         
         @media (max-width: 480px) {
@@ -1450,6 +2165,13 @@ useEffect(() => {
             padding: 16px;
             min-height: 56px;
           }
+          .privacy-mode { padding: 72px 8px 18px; }
+          .privacy-mode .card-body { padding: 18px 14px; }
+          .privacy-mode .language-switcher { top: 7px; right: 10px; }
+          .privacy-mode .privacy-header h2 { font-size: 19px; }
+          .privacy-mode .privacy-header p { font-size: 14px; }
+          .privacy-mode .privacy-notice { height: 290px; }
+          .privacy-form-title { font-size: 18px; }
         }
         
         @media (max-width: 360px) {
@@ -1518,13 +2240,112 @@ useEffect(() => {
         <div className="site-badge">{t.siteBadge}</div>
       </div>
 
-      <div className="card">
+      <div className={`card ${step === 0 ? "privacy-card" : ""}`}>
         <div className="card-body">
-          <div className="steps">
-            <div className={`step-dot ${step === 1 ? "active" : ""}`}></div>
-            <div className={`step-dot ${step === 2 ? "active" : ''}`}></div>
-            <div className={`step-dot ${step === 3 ? "active" : ''}`}></div>
-          </div>
+          {step > 0 && (
+            <div className="steps" aria-label={`${step} / 3`}>
+              <div className={`step-dot ${step === 1 ? "active" : ""}`}></div>
+              <div className={`step-dot ${step === 2 ? "active" : ''}`}></div>
+              <div className={`step-dot ${step === 3 ? "active" : ''}`}></div>
+            </div>
+          )}
+
+          {step === 0 && !consentDeclined && (
+            <section className="privacy-first fade" aria-labelledby="privacy-title">
+              <div className="privacy-header">
+                <div className="privacy-eyebrow">{privacy.eyebrow}</div>
+                <h2 id="privacy-title">{privacy.title}</h2>
+                <p>{privacy.subtitle}</p>
+              </div>
+
+              <div className="privacy-notice" tabIndex="0">
+                <div className="privacy-controller">
+                  <div className="privacy-controller-label">{privacy.controller}</div>
+                  <div className="privacy-controller-name">{privacy.controllerValue}</div>
+                </div>
+                <p>{privacy.intro}</p>
+
+                <div className="privacy-section">
+                  <h3>{privacy.dataTitle}</h3>
+                  <p>{privacy.dataText}</p>
+                </div>
+                <div className="privacy-section privacy-warning">
+                  <h3>{privacy.minimizeTitle}</h3>
+                  <p>{privacy.minimizeText}</p>
+                </div>
+                <div className="privacy-section">
+                  <h3>{privacy.purposeTitle}</h3>
+                  <p>{privacy.purposeText}</p>
+                </div>
+                <div className="privacy-section">
+                  <h3>{privacy.sharingTitle}</h3>
+                  <p>{privacy.sharingText}</p>
+                </div>
+                <div className="privacy-section">
+                  <h3>{privacy.retentionTitle}</h3>
+                  <p>{privacy.retentionText}</p>
+                </div>
+                <div className="privacy-section">
+                  <h3>{privacy.rightsTitle}</h3>
+                  <p>{privacy.rightsText}</p>
+                </div>
+                <div className="privacy-section">
+                  <h3>{privacy.contactTitle}</h3>
+                  <p>{privacy.contactText}</p>
+                </div>
+                <div className="privacy-section">
+                  <h3>{privacy.consequenceTitle}</h3>
+                  <p>{privacy.consequenceText}</p>
+                </div>
+                <small className="privacy-notice-version">{privacy.noticeVersion}: {PRIVACY_NOTICE_VERSION}</small>
+              </div>
+
+              <label className={`privacy-consent-box ${consentChecked ? "is-checked" : ""}`}>
+                <input
+                  type="checkbox"
+                  checked={consentChecked}
+                  onChange={(event) => setConsentChecked(event.target.checked)}
+                />
+                <span className="privacy-consent-copy">
+                  <strong>{privacy.requiredBadge}</strong>
+                  <span>{privacy.confirm}</span>
+                </span>
+              </label>
+
+              <div className="privacy-actions">
+                <button
+                  type="button"
+                  className="btn-action btn-tdk"
+                  disabled={!consentChecked}
+                  onClick={handleAcceptConsent}
+                >
+                  {privacy.accept}
+                </button>
+                <button
+                  type="button"
+                  className="btn-action btn-decline"
+                  onClick={handleDeclineConsent}
+                >
+                  {privacy.decline}
+                </button>
+              </div>
+            </section>
+          )}
+
+          {step === 0 && consentDeclined && (
+            <section className="privacy-declined fade" aria-live="polite">
+              <div className="privacy-declined-icon">i</div>
+              <h2>{privacy.declinedTitle}</h2>
+              <p>{privacy.declinedText}</p>
+              <button
+                type="button"
+                className="btn-action btn-ghost"
+                onClick={() => setConsentDeclined(false)}
+              >
+                {privacy.back}
+              </button>
+            </section>
+          )}
 
           {step === 1 && (
             <div className="fade">

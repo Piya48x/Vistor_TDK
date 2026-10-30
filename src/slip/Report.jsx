@@ -376,10 +376,10 @@ export default function Report() {
       const reader = new FileReader();
       reader.onloadend = async () => {
         const base64String = reader.result;
-        
+
         // ตรงนี้คุณสามารถเพิ่ม Logic การบันทึก URL ลงฐานข้อมูล Supabase ได้
         // ตัวอย่าง: await supabase.from('settings').update({ logo: base64String }).eq('id', 1);
-        
+
         Toast.fire({
           icon: 'success',
           title: 'อัปเดตรูปภาพเรียบร้อยแล้ว'
@@ -561,10 +561,10 @@ export default function Report() {
     );
     const checkoutTime = editForm.has_checkout
       ? thailandDateTimeToIso(
-          editForm.checkout_date,
-          editForm.checkout_hour,
-          editForm.checkout_minute
-        )
+        editForm.checkout_date,
+        editForm.checkout_hour,
+        editForm.checkout_minute
+      )
       : null;
 
     if (!fullName) {
@@ -924,9 +924,8 @@ export default function Report() {
 
   return (
     <div
-      className={`report-shell relative min-h-screen pb-20 text-[#1a2b49] ${
-        isDarkMode ? "report-dark bg-[#13243a]" : "bg-[#f0f4f8]"
-      }`}
+      className={`report-shell relative min-h-screen pb-20 text-[#1a2b49] ${isDarkMode ? "report-dark bg-[#13243a]" : "bg-[#f0f4f8]"
+        }`}
       style={{
         backgroundImage: isDarkMode
           ? "radial-gradient(circle at 8% 0%, rgba(38, 91, 174, 0.30), transparent 32%), radial-gradient(circle at 92% 10%, rgba(0, 51, 153, 0.22), transparent 30%)"
@@ -985,81 +984,79 @@ export default function Report() {
       )}
 
       {/* Navigation Bar */}
-  {false && ( <nav className="bg-white/10 dark:bg-slate-900/40 backdrop-blur-xl border-b border-white/20 dark:border-white/10 sticky top-0 z-50 px-6 lg:px-10 py-5 flex justify-between items-center shadow-lg transition-colors duration-300">
-      
-      {/* ฝั่งซ้าย: Logo & Title */}
-      <div className="flex items-center gap-5">
-        <div className="relative group">
-          <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-xl shadow-indigo-500/20 border-2 border-white/30 transition-transform group-hover:scale-105">
-            <img
-              src={bgImage}
-              alt="Company Logo"
-              className="w-full h-full object-cover"
-            />
+      {false && (<nav className="bg-white/10 dark:bg-slate-900/40 backdrop-blur-xl border-b border-white/20 dark:border-white/10 sticky top-0 z-50 px-6 lg:px-10 py-5 flex justify-between items-center shadow-lg transition-colors duration-300">
+
+        {/* ฝั่งซ้าย: Logo & Title */}
+        <div className="flex items-center gap-5">
+          <div className="relative group">
+            <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-xl shadow-indigo-500/20 border-2 border-white/30 transition-transform group-hover:scale-105">
+              <img
+                src={bgImage}
+                alt="Company Logo"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="absolute inset-0 rounded-2xl bg-indigo-500/20 blur-lg -z-10 group-hover:bg-indigo-500/40 transition-all"></div>
           </div>
-          <div className="absolute inset-0 rounded-2xl bg-indigo-500/20 blur-lg -z-10 group-hover:bg-indigo-500/40 transition-all"></div>
+          <div>
+            <h1 className="font-black text-xl lg:text-2xl text-slate-900 dark:text-white tracking-tight leading-none">
+              {ORG}
+            </h1>
+            <p className="text-[10px] lg:text-[11px] text-slate-800 dark:text-slate-300 font-bold uppercase tracking-[0.3em] mt-1">
+              Report Dashboard
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="font-black text-xl lg:text-2xl text-slate-900 dark:text-white tracking-tight leading-none">
-            {ORG}
-          </h1>
-          <p className="text-[10px] lg:text-[11px] text-slate-800 dark:text-slate-300 font-bold uppercase tracking-[0.3em] mt-1">
-            Report Dashboard
-          </p>
-        </div>
-      </div>
 
-      {/* ฝั่งขวา: Buttons Action */}
-      <div className="flex gap-2 lg:gap-3 items-center">
-        
-        {/* 1. ปุ่มลบ (แสดงเมื่อมีการเลือก) */}
-        {selectedIds.length > 0 && (
+        {/* ฝั่งขวา: Buttons Action */}
+        <div className="flex gap-2 lg:gap-3 items-center">
+
+          {/* 1. ปุ่มลบ (แสดงเมื่อมีการเลือก) */}
+          {selectedIds.length > 0 && (
+            <button
+              onClick={deleteSelected}
+              className="flex items-center gap-2 px-4 lg:px-6 py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-rose-100 active:scale-95 animate-in slide-in-from-right-4"
+            >
+              <Trash2 size={18} />
+              <span className="hidden lg:inline">ลบที่เลือก</span> ({selectedIds.length})
+            </button>
+          )}
+
+          {/* 2. ปุ่ม Export */}
           <button
-            onClick={deleteSelected}
-            className="flex items-center gap-2 px-4 lg:px-6 py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-rose-100 active:scale-95 animate-in slide-in-from-right-4"
+            onClick={() => exportToExcel(selectedIds)}
+            disabled={selectedIds.length === 0}
+            className={`flex items-center gap-2 px-4 lg:px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-lg active:scale-95 ${selectedIds.length > 0
+                ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-100/50"
+                : "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed border border-white/10"
+              }`}
           >
-            <Trash2 size={18} />
-            <span className="hidden lg:inline">ลบที่เลือก</span> ({selectedIds.length})
+            <Download size={18} />
+            <span className="hidden lg:inline">Export Excel</span> ({selectedIds.length})
           </button>
-        )}
 
-        {/* 2. ปุ่ม Export */}
-        <button
-          onClick={() => exportToExcel(selectedIds)}
-          disabled={selectedIds.length === 0}
-          className={`flex items-center gap-2 px-4 lg:px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-lg active:scale-95 ${
-            selectedIds.length > 0
-              ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-100/50"
-              : "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed border border-white/10"
-          }`}
-        >
-          <Download size={18} />
-          <span className="hidden lg:inline">Export Excel</span> ({selectedIds.length})
-        </button>
+          {/* --- 3. ปุ่มเปลี่ยนธีม (แทรกตรงนี้) --- */}
+          <button
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            className={`p-3 rounded-2xl transition-all active:scale-90 shadow-md flex items-center justify-center ${isDarkMode
+                ? "bg-slate-800 text-yellow-400 hover:bg-slate-700 border border-white/10"
+                : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200"
+              }`}
+            title={isDarkMode ? "Light Mode" : "Dark Mode"}
+          >
+            {isDarkMode ? <Sun size={22} /> : <Moon size={22} />}
+          </button>
 
-        {/* --- 3. ปุ่มเปลี่ยนธีม (แทรกตรงนี้) --- */}
-        <button
-          onClick={() => setIsDarkMode(!isDarkMode)}
-          className={`p-3 rounded-2xl transition-all active:scale-90 shadow-md flex items-center justify-center ${
-            isDarkMode 
-              ? "bg-slate-800 text-yellow-400 hover:bg-slate-700 border border-white/10" 
-              : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200"
-          }`}
-          title={isDarkMode ? "Light Mode" : "Dark Mode"}
-        >
-          {isDarkMode ? <Sun size={22} /> : <Moon size={22} />}
-        </button>
+          {/* 4. ปุ่ม Home */}
+          <button
+            onClick={() => navigate("/")}
+            className="p-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-2xl transition-all active:scale-90 border border-white/10 shadow-md"
+          >
+            <Home size={22} />
+          </button>
 
-        {/* 4. ปุ่ม Home */}
-        <button
-          onClick={() => navigate("/")}
-          className="p-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-2xl transition-all active:scale-90 border border-white/10 shadow-md"
-        >
-          <Home size={22} />
-        </button>
-        
-      </div>
-    </nav> )}
+        </div>
+      </nav>)}
 
       <div
         className="mx-auto flex max-w-[1600px] flex-col items-start gap-4 p-3 sm:p-4 lg:p-6"
@@ -1073,9 +1070,8 @@ export default function Report() {
           />
         )}
         <aside
-          className={`fixed inset-y-0 left-0 z-[80] w-[280px] max-w-[88vw] overflow-y-auto border-r border-blue-100 bg-white p-5 shadow-[18px_0_45px_rgba(0,30,80,0.20)] transition-transform duration-200 ${
-            isSidebarCollapsed ? "pointer-events-none -translate-x-full" : "translate-x-0"
-          }`}
+          className={`fixed inset-y-0 left-0 z-[80] w-[280px] max-w-[88vw] overflow-y-auto border-r border-blue-100 bg-white p-5 shadow-[18px_0_45px_rgba(0,30,80,0.20)] transition-transform duration-200 ${isSidebarCollapsed ? "pointer-events-none -translate-x-full" : "translate-x-0"
+            }`}
         >
           <button
             type="button"
@@ -1121,9 +1117,8 @@ export default function Report() {
               <a
                 href="#daily-summary"
                 onClick={() => setIsSidebarCollapsed(true)}
-                className={`flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#003399] px-3 text-sm font-semibold text-white shadow-[0_6px_16px_rgba(0,51,153,0.16)] ${
-                  isSidebarCollapsed ? "lg:px-0" : "lg:justify-start"
-                }`}
+                className={`flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#003399] px-3 text-sm font-semibold text-white shadow-[0_6px_16px_rgba(0,51,153,0.16)] ${isSidebarCollapsed ? "lg:px-0" : "lg:justify-start"
+                  }`}
                 title="สรุปวันนี้"
               >
                 <Calendar size={18} />
@@ -1132,9 +1127,8 @@ export default function Report() {
               <a
                 href="#visitor-list"
                 onClick={() => setIsSidebarCollapsed(true)}
-                className={`flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#eef4ff] px-3 text-sm font-semibold text-[#003399] transition hover:bg-[#dfeaff] ${
-                  isSidebarCollapsed ? "lg:px-0" : "lg:justify-start"
-                }`}
+                className={`flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#eef4ff] px-3 text-sm font-semibold text-[#003399] transition hover:bg-[#dfeaff] ${isSidebarCollapsed ? "lg:px-0" : "lg:justify-start"
+                  }`}
                 title="รายชื่อผู้ติดต่อ"
               >
                 <Users size={18} />
@@ -1143,9 +1137,8 @@ export default function Report() {
               <a
                 href="#analytics"
                 onClick={() => setIsSidebarCollapsed(true)}
-                className={`flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#eef4ff] px-3 text-sm font-semibold text-[#003399] transition hover:bg-[#dfeaff] ${
-                  isSidebarCollapsed ? "lg:px-0" : "lg:justify-start"
-                }`}
+                className={`flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#eef4ff] px-3 text-sm font-semibold text-[#003399] transition hover:bg-[#dfeaff] ${isSidebarCollapsed ? "lg:px-0" : "lg:justify-start"
+                  }`}
                 title="ภาพรวมสถิติ"
               >
                 <BarChart3 size={18} />
@@ -1161,9 +1154,8 @@ export default function Report() {
                   loadVisitors(activeFilter);
                   loadCheckoutQueue();
                 }}
-                className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-[#d8e4f7] bg-[#f7faff] px-3 text-sm font-semibold text-[#003399] transition hover:border-[#003399] hover:bg-white ${
-                  isSidebarCollapsed ? "lg:px-0" : "lg:justify-start"
-                }`}
+                className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-[#d8e4f7] bg-[#f7faff] px-3 text-sm font-semibold text-[#003399] transition hover:border-[#003399] hover:bg-white ${isSidebarCollapsed ? "lg:px-0" : "lg:justify-start"
+                  }`}
                 title="รีเฟรชข้อมูล"
               >
                 <RefreshCw size={18} />
@@ -1172,9 +1164,8 @@ export default function Report() {
               <button
                 type="button"
                 onClick={toggleTheme}
-                className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-[#d8e4f7] bg-[#f7faff] px-3 text-sm font-semibold text-[#003399] transition hover:border-[#003399] hover:bg-white ${
-                  isSidebarCollapsed ? "lg:px-0" : "lg:justify-start"
-                }`}
+                className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-[#d8e4f7] bg-[#f7faff] px-3 text-sm font-semibold text-[#003399] transition hover:border-[#003399] hover:bg-white ${isSidebarCollapsed ? "lg:px-0" : "lg:justify-start"
+                  }`}
                 title={isDarkMode ? "เปลี่ยนเป็นธีมสว่าง" : "เปลี่ยนเป็นธีมมืด"}
                 aria-pressed={isDarkMode}
               >
@@ -1186,9 +1177,8 @@ export default function Report() {
               <button
                 type="button"
                 onClick={() => navigate("/")}
-                className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-[#d8e4f7] bg-white px-3 text-sm font-semibold text-[#315184] transition hover:border-[#003399] hover:bg-[#f7faff] ${
-                  isSidebarCollapsed ? "lg:px-0" : "lg:justify-start"
-                }`}
+                className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 border-[#d8e4f7] bg-white px-3 text-sm font-semibold text-[#315184] transition hover:border-[#003399] hover:bg-[#f7faff] ${isSidebarCollapsed ? "lg:px-0" : "lg:justify-start"
+                  }`}
                 title="หน้าลงทะเบียน"
               >
                 <Home size={18} />
@@ -1199,726 +1189,718 @@ export default function Report() {
         </aside>
 
         <main className="flex w-full min-w-0 flex-1 flex-col gap-4">
-        <section className="order-0 space-y-3 rounded-[20px] border border-blue-100 bg-white p-3 shadow-[0_8px_22px_rgba(0,51,153,0.06)]">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
-            <div className="flex min-w-0 items-center gap-3 xl:mr-auto">
-              <button
-                type="button"
-                onClick={() => setIsSidebarCollapsed(false)}
-                className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#003399] px-4 text-sm font-semibold text-white transition hover:bg-[#004ecc]"
-                aria-label="เปิด Sidebar"
-                aria-expanded={!isSidebarCollapsed}
-              >
-                ☰
-              </button>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-[#003399] sm:text-base">
-                  รายงานผู้มาติดต่อ
-                </p>
-                <p className="truncate text-xs text-[#5f7394]">
-                  {getFilterStatusText(activeFilter)} · {visitors.length} รายการ
-                </p>
+          <section className="order-0 space-y-3 rounded-[20px] border border-blue-100 bg-white p-3 shadow-[0_8px_22px_rgba(0,51,153,0.06)]">
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+              <div className="flex min-w-0 items-center gap-3 xl:mr-auto">
+                <button
+                  type="button"
+                  onClick={() => setIsSidebarCollapsed(false)}
+                  className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#003399] px-4 text-sm font-semibold text-white transition hover:bg-[#004ecc]"
+                  aria-label="เปิด Sidebar"
+                  aria-expanded={!isSidebarCollapsed}
+                >
+                  ☰
+                </button>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-[#003399] sm:text-base">
+                    รายงานผู้มาติดต่อ
+                  </p>
+                  <p className="truncate text-xs text-[#5f7394]">
+                    {getFilterStatusText(activeFilter)} · {visitors.length} รายการ
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {quickFilters.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        setActiveFilter(item.id);
+                        loadVisitors(item.id);
+                      }}
+                      className={`inline-flex min-h-10 items-center gap-2 rounded-xl border-2 px-3 py-2 text-sm font-semibold transition-colors ${activeFilter === item.id
+                          ? "border-[#003399] bg-[#003399] text-white shadow-[0_6px_14px_rgba(0,51,153,0.18)]"
+                          : "border-[#d8e4f7] bg-[#f7faff] text-[#315184] hover:border-[#003399] hover:bg-white"
+                        }`}
+                    >
+                      <Icon size={16} /> {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex shrink-0 gap-2 overflow-x-auto pb-1 xl:pb-0">
+                <button
+                  onClick={() => exportToExcel(selectedIds)}
+                  disabled={selectedIds.length === 0}
+                  className={`inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold transition-colors ${selectedIds.length > 0
+                      ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                      : "cursor-not-allowed bg-[#edf1f7] text-[#8d9bb0]"
+                    }`}
+                >
+                  <Download size={16} /> Export ({selectedIds.length})
+                </button>
+                {selectedIds.length > 0 && (
+                  <button
+                    onClick={deleteSelected}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-rose-600 px-3 text-sm font-semibold text-white hover:bg-rose-700"
+                  >
+                    <Trash2 size={16} /> ลบ
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => navigate("/")}
+                  className="inline-flex min-h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl border-2 border-[#003399] bg-white px-3 text-sm font-semibold text-[#003399] transition hover:bg-[#eef4ff]"
+                >
+                  <UserCheck size={16} /> ลงทะเบียนผู้ติดต่อ
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 border-[#d8e4f7] bg-[#f7faff] text-[#003399] transition hover:border-[#003399]"
+                  title={isDarkMode ? "เปลี่ยนเป็นธีมสว่าง" : "เปลี่ยนเป็นธีมมืด"}
+                  aria-label={isDarkMode ? "เปลี่ยนเป็นธีมสว่าง" : "เปลี่ยนเป็นธีมมืด"}
+                  aria-pressed={isDarkMode}
+                >
+                  {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+                </button>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {quickFilters.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                      setActiveFilter(item.id);
-                      loadVisitors(item.id);
-                    }}
-                    className={`inline-flex min-h-10 items-center gap-2 rounded-xl border-2 px-3 py-2 text-sm font-semibold transition-colors ${
-                      activeFilter === item.id
-                        ? "border-[#003399] bg-[#003399] text-white shadow-[0_6px_14px_rgba(0,51,153,0.18)]"
-                        : "border-[#d8e4f7] bg-[#f7faff] text-[#315184] hover:border-[#003399] hover:bg-white"
-                    }`}
+            <div className="grid grid-cols-1 items-stretch gap-2 lg:grid-cols-[minmax(280px,1fr)_165px_165px_minmax(160px,auto)]">
+              <div className="relative h-11">
+                <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#5071a5]" />
+                <input
+                  type="text"
+                  placeholder="ค้นหาชื่อ บริษัท ผู้ติดต่อ หรือเบอร์โทร"
+                  value={searchName}
+                  onChange={(e) => {
+                    setSearchName(e.target.value);
+                    setShowSearchSuggestions(true);
+                  }}
+                  onFocus={() => setShowSearchSuggestions(true)}
+                  onBlur={() => setShowSearchSuggestions(false)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      setShowSearchSuggestions(false);
+                      setActiveFilter("CUSTOM");
+                      loadVisitors("CUSTOM");
+                    }
+                    if (e.key === "Escape") setShowSearchSuggestions(false);
+                  }}
+                  role="combobox"
+                  aria-label="ค้นหาผู้มาติดต่อ"
+                  aria-autocomplete="list"
+                  aria-expanded={showSearchSuggestions && searchName.trim().length >= 2}
+                  className="h-11 w-full rounded-xl border-2 border-[#d8e4f7] bg-[#f7faff] pl-11 pr-4 text-sm text-[#1a2b49] outline-none transition placeholder:text-[#8494ad] focus:border-[#003399] focus:bg-white focus:ring-4 focus:ring-blue-100"
+                />
+                {showSearchSuggestions && searchName.trim().length >= 2 && (
+                  <div
+                    className="absolute left-0 right-0 top-[calc(100%+6px)] z-[60] max-h-80 overflow-y-auto rounded-2xl border border-blue-100 bg-white p-2 shadow-[0_18px_45px_rgba(0,51,153,0.18)]"
+                    role="listbox"
                   >
-                    <Icon size={16} /> {item.label}
-                  </button>
-                );
-              })}
-            </div>
+                    {isLoadingSuggestions ? (
+                      <div className="flex items-center justify-center gap-2 px-4 py-5 text-sm font-medium text-[#5f7394]">
+                        <Loader2 size={17} className="animate-spin text-[#003399]" />
+                        กำลังค้นหา...
+                      </div>
+                    ) : searchSuggestions.length > 0 ? (
+                      searchSuggestions.map((suggestion) => {
+                        const suggestionValue =
+                          suggestion.full_name ||
+                          suggestion.company ||
+                          suggestion.contact_person ||
+                          suggestion.phone ||
+                          "";
 
-            <div className="flex shrink-0 gap-2 overflow-x-auto pb-1 xl:pb-0">
-              <button
-                onClick={() => exportToExcel(selectedIds)}
-                disabled={selectedIds.length === 0}
-                className={`inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold transition-colors ${
-                  selectedIds.length > 0
-                    ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                    : "cursor-not-allowed bg-[#edf1f7] text-[#8d9bb0]"
-                }`}
-              >
-                <Download size={16} /> Export ({selectedIds.length})
-              </button>
-              {selectedIds.length > 0 && (
+                        return (
+                          <button
+                            key={suggestion.id}
+                            type="button"
+                            role="option"
+                            aria-selected="false"
+                            onMouseDown={(event) => {
+                              event.preventDefault();
+                              setSearchName(suggestionValue);
+                              setShowSearchSuggestions(false);
+                            }}
+                            className="flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-[#eef4ff]"
+                          >
+                            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#eef4ff] text-[#003399]">
+                              <UserCircle size={18} />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-semibold text-[#1a2b49]">
+                                {suggestion.full_name || "ไม่ระบุชื่อ"}
+                              </span>
+                              <span className="block truncate text-xs text-[#5f7394]">
+                                {[suggestion.company, suggestion.contact_person, suggestion.phone]
+                                  .filter(Boolean)
+                                  .join(" · ") || "ไม่มีรายละเอียดเพิ่มเติม"}
+                              </span>
+                            </span>
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <div className="px-4 py-5 text-center text-sm font-medium text-[#5f7394]">
+                        ไม่พบข้อมูลที่ใกล้เคียง
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <label className="m-0 block h-11">
+                <span className="sr-only">ตั้งแต่วันที่</span>
+                <input
+                  type="date"
+                  value={searchStart}
+                  onChange={(e) => setSearchStart(e.target.value)}
+                  className="block h-full w-full rounded-xl border-2 border-[#d8e4f7] bg-[#f7faff] px-3 text-sm font-medium text-[#1a2b49] outline-none focus:border-[#003399] focus:bg-white"
+                />
+              </label>
+              <label className="m-0 block h-11">
+                <span className="sr-only">ถึงวันที่</span>
+                <input
+                  type="date"
+                  value={searchEnd}
+                  onChange={(e) => setSearchEnd(e.target.value)}
+                  className="block h-full w-full rounded-xl border-2 border-[#d8e4f7] bg-[#f7faff] px-3 text-sm font-medium text-[#1a2b49] outline-none focus:border-[#003399] focus:bg-white"
+                />
+              </label>
+              <div className="flex h-11 flex-nowrap items-stretch gap-2">
                 <button
-                  onClick={deleteSelected}
-                  className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-rose-600 px-3 text-sm font-semibold text-white hover:bg-rose-700"
-                >
-                  <Trash2 size={16} /> ลบ
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => navigate("/")}
-                className="inline-flex min-h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl border-2 border-[#003399] bg-white px-3 text-sm font-semibold text-[#003399] transition hover:bg-[#eef4ff]"
-              >
-                <UserCheck size={16} /> ลงทะเบียนผู้ติดต่อ
-              </button>
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 border-[#d8e4f7] bg-[#f7faff] text-[#003399] transition hover:border-[#003399]"
-                title={isDarkMode ? "เปลี่ยนเป็นธีมสว่าง" : "เปลี่ยนเป็นธีมมืด"}
-                aria-label={isDarkMode ? "เปลี่ยนเป็นธีมสว่าง" : "เปลี่ยนเป็นธีมมืด"}
-                aria-pressed={isDarkMode}
-              >
-                {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 items-stretch gap-2 lg:grid-cols-[minmax(280px,1fr)_165px_165px_minmax(160px,auto)]">
-            <div className="relative h-11">
-              <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#5071a5]" />
-              <input
-                type="text"
-                placeholder="ค้นหาชื่อ บริษัท ผู้ติดต่อ หรือเบอร์โทร"
-                value={searchName}
-                onChange={(e) => {
-                  setSearchName(e.target.value);
-                  setShowSearchSuggestions(true);
-                }}
-                onFocus={() => setShowSearchSuggestions(true)}
-                onBlur={() => setShowSearchSuggestions(false)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
+                  type="button"
+                  onClick={() => {
                     setShowSearchSuggestions(false);
                     setActiveFilter("CUSTOM");
                     loadVisitors("CUSTOM");
-                  }
-                  if (e.key === "Escape") setShowSearchSuggestions(false);
-                }}
-                role="combobox"
-                aria-label="ค้นหาผู้มาติดต่อ"
-                aria-autocomplete="list"
-                aria-expanded={showSearchSuggestions && searchName.trim().length >= 2}
-                className="h-11 w-full rounded-xl border-2 border-[#d8e4f7] bg-[#f7faff] pl-11 pr-4 text-sm text-[#1a2b49] outline-none transition placeholder:text-[#8494ad] focus:border-[#003399] focus:bg-white focus:ring-4 focus:ring-blue-100"
-              />
-              {showSearchSuggestions && searchName.trim().length >= 2 && (
-                <div
-                  className="absolute left-0 right-0 top-[calc(100%+6px)] z-[60] max-h-80 overflow-y-auto rounded-2xl border border-blue-100 bg-white p-2 shadow-[0_18px_45px_rgba(0,51,153,0.18)]"
-                  role="listbox"
+                  }}
+                  className="inline-flex h-full min-w-[104px] flex-1 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[#003399] px-4 text-sm font-semibold text-white hover:bg-[#004ecc]"
                 >
-                  {isLoadingSuggestions ? (
-                    <div className="flex items-center justify-center gap-2 px-4 py-5 text-sm font-medium text-[#5f7394]">
-                      <Loader2 size={17} className="animate-spin text-[#003399]" />
-                      กำลังค้นหา...
-                    </div>
-                  ) : searchSuggestions.length > 0 ? (
-                    searchSuggestions.map((suggestion) => {
-                      const suggestionValue =
-                        suggestion.full_name ||
-                        suggestion.company ||
-                        suggestion.contact_person ||
-                        suggestion.phone ||
-                        "";
-
-                      return (
-                        <button
-                          key={suggestion.id}
-                          type="button"
-                          role="option"
-                          aria-selected="false"
-                          onMouseDown={(event) => {
-                            event.preventDefault();
-                            setSearchName(suggestionValue);
-                            setShowSearchSuggestions(false);
-                          }}
-                          className="flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-[#eef4ff]"
-                        >
-                          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#eef4ff] text-[#003399]">
-                            <UserCircle size={18} />
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm font-semibold text-[#1a2b49]">
-                              {suggestion.full_name || "ไม่ระบุชื่อ"}
-                            </span>
-                            <span className="block truncate text-xs text-[#5f7394]">
-                              {[suggestion.company, suggestion.contact_person, suggestion.phone]
-                                .filter(Boolean)
-                                .join(" · ") || "ไม่มีรายละเอียดเพิ่มเติม"}
-                            </span>
-                          </span>
-                        </button>
-                      );
-                    })
-                  ) : (
-                    <div className="px-4 py-5 text-center text-sm font-medium text-[#5f7394]">
-                      ไม่พบข้อมูลที่ใกล้เคียง
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            <label className="m-0 block h-11">
-              <span className="sr-only">ตั้งแต่วันที่</span>
-              <input
-                type="date"
-                value={searchStart}
-                onChange={(e) => setSearchStart(e.target.value)}
-                className="block h-full w-full rounded-xl border-2 border-[#d8e4f7] bg-[#f7faff] px-3 text-sm font-medium text-[#1a2b49] outline-none focus:border-[#003399] focus:bg-white"
-              />
-            </label>
-            <label className="m-0 block h-11">
-              <span className="sr-only">ถึงวันที่</span>
-              <input
-                type="date"
-                value={searchEnd}
-                onChange={(e) => setSearchEnd(e.target.value)}
-                className="block h-full w-full rounded-xl border-2 border-[#d8e4f7] bg-[#f7faff] px-3 text-sm font-medium text-[#1a2b49] outline-none focus:border-[#003399] focus:bg-white"
-              />
-            </label>
-            <div className="flex h-11 flex-nowrap items-stretch gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowSearchSuggestions(false);
-                  setActiveFilter("CUSTOM");
-                  loadVisitors("CUSTOM");
-                }}
-                className="inline-flex h-full min-w-[104px] flex-1 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[#003399] px-4 text-sm font-semibold text-white hover:bg-[#004ecc]"
-              >
-                <Search size={16} /> ค้นหา
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowSearchSuggestions(false);
-                  setSearchName("");
-                  setSearchStart("");
-                  setSearchEnd("");
-                  loadVisitors("TODAY");
-                  setActiveFilter("TODAY");
-                }}
-                className="inline-flex h-full w-11 shrink-0 items-center justify-center rounded-xl border-2 border-[#d8e4f7] bg-white text-[#315184] hover:border-[#003399] hover:bg-[#f7faff]"
-                title="รีเซ็ต"
-                aria-label="รีเซ็ตการค้นหา"
-              >
-                <RotateCcw size={17} />
-              </button>
-            </div>
-          </div>
-        </section>
-        {/* Stats Grid */}
-        <div id="daily-summary" className="order-1 grid scroll-mt-6 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {summaryCards.map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setActiveFilter(item.id);
-                  loadVisitors(item.id);
-                }}
-                className={`min-h-[124px] rounded-[20px] border-2 bg-white p-4 text-left shadow-[0_8px_24px_rgba(0,51,153,0.07)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(0,51,153,0.12)] ${
-                  activeFilter === item.id
-                    ? "border-[#003399] ring-4 ring-blue-100"
-                    : "border-white hover:border-[#bfd2f2]"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold uppercase tracking-wide text-[#315184]">
-                        {item.label}
-                      </p>
-                      {item.live && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-rose-600">
-                          <span className="relative flex h-2.5 w-2.5">
-                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75"></span>
-                            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-rose-500"></span>
-                          </span>
-                          Live
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-1 text-4xl font-bold leading-none tracking-tight text-[#003399]">
-                      {item.value.toLocaleString()}
-                    </p>
-                    <p className="mt-1 text-sm font-medium text-[#5f7394]">
-                      {item.hint}
-                    </p>
-                  </div>
-                  <div className={`relative rounded-lg border p-2.5 ${item.accent}`}>
-                    {item.live && (
-                      <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75"></span>
-                        <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-rose-500"></span>
-                      </span>
-                    )}
-                    <Icon size={22} className={item.live ? "animate-pulse" : ""} />
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Operational Overview */}
-        <div id="analytics" className="order-5 grid scroll-mt-6 grid-cols-1 gap-6 xl:grid-cols-[1.35fr_0.95fr]">
-          <section className="rounded-[28px] border border-blue-100 bg-white p-5 shadow-[0_14px_38px_rgba(0,51,153,0.08)] sm:p-7">
-            <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
-              <div>
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#45638f]">
-                  <BarChart3 size={16} />
-                  Overview
-                </div>
-                <h2 className="mt-2 text-2xl font-bold text-[#003399] sm:text-3xl">
-                  ภาพรวมการเข้าออกวันนี้
-                </h2>
-                <p className="mt-1 text-base font-normal text-[#5f7394]">
-                  แสดงสถานะที่ รปภ. ต้องติดตามแบบเรียลไทม์
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  loadSummary();
-                  loadVisitors(activeFilter);
-                }}
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border-2 border-[#d8e4f7] bg-[#f7faff] px-5 text-base font-semibold text-[#003399] hover:border-[#003399] hover:bg-white"
-              >
-                <RefreshCw size={16} />
-                รีเฟรช
-              </button>
-            </div>
-
-            <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="rounded-2xl border border-blue-100 bg-[#f7faff] p-4">
-                <div className="flex items-center justify-between text-sm font-bold text-slate-600">
-                  <span>ยังอยู่ในพื้นที่</span>
-                  <span>{activeRate}%</span>
-                </div>
-                <div className="mt-3 h-3 rounded-full bg-white border border-slate-200 overflow-hidden">
-                  <div
-                    className="h-full bg-rose-500"
-                    style={{ width: `${activeRate}%` }}
-                  />
-                </div>
-              </div>
-              <div className="rounded-2xl border border-blue-100 bg-[#f7faff] p-4">
-                <div className="flex items-center justify-between text-sm font-bold text-slate-600">
-                  <span>เช็คเอ้าท์แล้ว</span>
-                  <span>{checkoutRate}%</span>
-                </div>
-                <div className="mt-3 h-3 rounded-full bg-white border border-slate-200 overflow-hidden">
-                  <div
-                    className="h-full bg-emerald-500"
-                    style={{ width: `${checkoutRate}%` }}
-                  />
-                </div>
-              </div>
-              <div className="rounded-2xl border border-blue-100 bg-[#f7faff] p-4">
-                <div className="flex items-center gap-2 text-sm font-bold text-slate-600">
-                  <TrendingUp size={16} className="text-blue-600" />
-                  ชุดข้อมูลที่แสดง
-                </div>
-                <p className="mt-2 text-3xl font-bold text-[#003399]">
-                  {visitors.length.toLocaleString()}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1fr_0.9fr] gap-6">
-              <div className="rounded-2xl border border-blue-100 p-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-black text-slate-700">
-                    Check-in ตามช่วงเวลา
-                  </p>
-                  <p className="text-xs font-bold text-slate-400">
-                    {getFilterStatusText()}
-                  </p>
-                </div>
-                <div className="mt-5 flex h-36 items-end gap-2">
-                  {visibleHourlyBuckets.map((item) => (
-                    <div key={item.hour} className="flex flex-1 flex-col items-center gap-2">
-                      <div className="w-full h-28 flex items-end">
-                        <div
-                          className={`w-full rounded-t-md ${
-                            item.count > 0 ? "bg-blue-500" : "bg-slate-200"
-                          }`}
-                          style={{
-                            height: `${Math.max(8, (item.count / maxHourlyCount) * 100)}%`,
-                          }}
-                          title={`${String(item.hour).padStart(2, "0")}:00 - ${item.count} คน`}
-                        />
-                      </div>
-                      <span className="text-[10px] font-bold text-slate-400">
-                        {String(item.hour).padStart(2, "0")}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-blue-100 p-4">
-                <p className="text-sm font-black text-slate-700">
-                  วัตถุประสงค์ยอดนิยม
-                </p>
-                <div className="mt-4 space-y-3">
-                  {purposeBreakdown.length ? (
-                    purposeBreakdown.map(([label, count]) => (
-                      <div key={label}>
-                        <div className="flex justify-between gap-3 text-sm font-bold">
-                          <span className="truncate text-slate-700">{label}</span>
-                          <span className="text-slate-500">{count}</span>
-                        </div>
-                        <div className="mt-1 h-2 rounded-full bg-slate-100 overflow-hidden">
-                          <div
-                            className="h-full bg-amber-500"
-                            style={{ width: `${(count / maxPurposeCount) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm font-semibold text-slate-400">
-                      ยังไม่มีข้อมูลสำหรับกราฟนี้
-                    </p>
-                  )}
-                </div>
+                  <Search size={16} /> ค้นหา
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSearchSuggestions(false);
+                    setSearchName("");
+                    setSearchStart("");
+                    setSearchEnd("");
+                    loadVisitors("TODAY");
+                    setActiveFilter("TODAY");
+                  }}
+                  className="inline-flex h-full w-11 shrink-0 items-center justify-center rounded-xl border-2 border-[#d8e4f7] bg-white text-[#315184] hover:border-[#003399] hover:bg-[#f7faff]"
+                  title="รีเซ็ต"
+                  aria-label="รีเซ็ตการค้นหา"
+                >
+                  <RotateCcw size={17} />
+                </button>
               </div>
             </div>
           </section>
-
-          <aside className="rounded-[28px] border border-blue-100 bg-white p-5 shadow-[0_14px_38px_rgba(0,51,153,0.08)] sm:p-7">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 text-rose-600 font-bold text-xs uppercase tracking-wide">
-                  <AlertTriangle size={16} />
-                  Action Queue
-                </div>
-                <h2 className="mt-2 text-2xl font-bold text-[#003399] sm:text-3xl">
-                  รอเช็คเอ้าท์
-                </h2>
-                <p className="mt-1 text-base font-normal text-[#5f7394]">
-                  รายการที่อยู่นานสุดขึ้นก่อน
-                </p>
-              </div>
-              <span className="rounded-lg bg-rose-50 px-3 py-2 text-lg font-black text-rose-600">
-                {summary.staying}
-              </span>
-            </div>
-
-            <div className="mt-5 space-y-3">
-              {priorityCheckoutList.length ? (
-                priorityCheckoutList.map((v) => (
-                  <div
-                    key={v.id}
-                    className="rounded-2xl border border-blue-100 p-4 transition-colors hover:border-rose-200 hover:bg-rose-50/40"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-base font-black text-slate-900">
-                          {v.full_name || "ไม่ระบุชื่อ"}
+          {/* Stats Grid */}
+          <div id="daily-summary" className="order-1 grid scroll-mt-6 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {summaryCards.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveFilter(item.id);
+                    loadVisitors(item.id);
+                  }}
+                  className={`min-h-[124px] rounded-[20px] border-2 bg-white p-4 text-left shadow-[0_8px_24px_rgba(0,51,153,0.07)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(0,51,153,0.12)] ${activeFilter === item.id
+                      ? "border-[#003399] ring-4 ring-blue-100"
+                      : "border-white hover:border-[#bfd2f2]"
+                    }`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold uppercase tracking-wide text-[#315184]">
+                          {item.label}
                         </p>
-                        <p className="truncate text-sm font-semibold text-slate-500">
-                          {v.company || "ทั่วไป"} · {v.contact_person || "ไม่ระบุผู้ติดต่อ"}
-                        </p>
-                        <p className="mt-2 inline-flex items-center gap-2 rounded-md bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">
-                          <Clock size={13} />
-                          {calculateDuration(v.checkin_time)}
-                        </p>
+                        {item.live && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-rose-600">
+                            <span className="relative flex h-2.5 w-2.5">
+                              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75"></span>
+                              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-rose-500"></span>
+                            </span>
+                            Live
+                          </span>
+                        )}
                       </div>
-                      <button
-                        onClick={() => handleCheckOut(v.id)}
-                        className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-base font-semibold text-white hover:bg-emerald-700"
-                      >
-                        <CheckCircle size={16} />
-                        ออก
-                      </button>
+                      <p className="mt-1 text-4xl font-bold leading-none tracking-tight text-[#003399]">
+                        {item.value.toLocaleString()}
+                      </p>
+                      <p className="mt-1 text-sm font-medium text-[#5f7394]">
+                        {item.hint}
+                      </p>
+                    </div>
+                    <div className={`relative rounded-lg border p-2.5 ${item.accent}`}>
+                      {item.live && (
+                        <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75"></span>
+                          <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-rose-500"></span>
+                        </span>
+                      )}
+                      <Icon size={22} className={item.live ? "animate-pulse" : ""} />
                     </div>
                   </div>
-                ))
-              ) : (
-                <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center">
-                  <UserCheck className="mx-auto text-emerald-500" size={36} />
-                  <p className="mt-3 text-sm font-bold text-slate-500">
-                    ไม่มีรายการค้างเช็คเอ้าท์
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Operational Overview */}
+          <div id="analytics" className="order-5 grid scroll-mt-6 grid-cols-1 gap-6 xl:grid-cols-[1.35fr_0.95fr]">
+            <section className="rounded-[28px] border border-blue-100 bg-white p-5 shadow-[0_14px_38px_rgba(0,51,153,0.08)] sm:p-7">
+              <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#45638f]">
+                    <BarChart3 size={16} />
+                    Overview
+                  </div>
+                  <h2 className="mt-2 text-2xl font-bold text-[#003399] sm:text-3xl">
+                    ภาพรวมการเข้าออกวันนี้
+                  </h2>
+                  <p className="mt-1 text-base font-normal text-[#5f7394]">
+                    แสดงสถานะที่ รปภ. ต้องติดตามแบบเรียลไทม์
                   </p>
                 </div>
-              )}
-            </div>
+                <button
+                  onClick={() => {
+                    loadSummary();
+                    loadVisitors(activeFilter);
+                  }}
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border-2 border-[#d8e4f7] bg-[#f7faff] px-5 text-base font-semibold text-[#003399] hover:border-[#003399] hover:bg-white"
+                >
+                  <RefreshCw size={16} />
+                  รีเฟรช
+                </button>
+              </div>
 
-            {activeFilter === "CHECKOUT_TODAY" && (
-              <div className="mt-6 border-t border-slate-200 pt-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="flex items-center gap-2 text-sm font-black text-emerald-700">
-                      <CheckCircle size={16} />
-                      เช็คเอ้าท์แล้ววันนี้
-                    </p>
-                    <p className="mt-1 text-xs font-semibold text-slate-500">
-                      รายชื่อจากตัวกรองเช็คเอ้าท์วันนี้
-                    </p>
+              <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="rounded-2xl border border-blue-100 bg-[#f7faff] p-4">
+                  <div className="flex items-center justify-between text-sm font-bold text-slate-600">
+                    <span>ยังอยู่ในพื้นที่</span>
+                    <span>{activeRate}%</span>
                   </div>
-                  <span className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-black text-emerald-700">
-                    {completedVisitors.length}
-                  </span>
+                  <div className="mt-3 h-3 rounded-full bg-white border border-slate-200 overflow-hidden">
+                    <div
+                      className="h-full bg-rose-500"
+                      style={{ width: `${activeRate}%` }}
+                    />
+                  </div>
                 </div>
-
-                <div className="mt-4 space-y-3">
-                  {completedVisitors.length ? (
-                    completedVisitors.slice(0, 6).map((v) => (
-                      <div
-                        key={`completed-${v.id}`}
-                        className="rounded-lg border border-emerald-100 bg-emerald-50/60 p-4"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="truncate text-base font-black text-slate-900">
-                              {v.full_name || "ไม่ระบุชื่อ"}
-                            </p>
-                            <p className="truncate text-sm font-semibold text-slate-500">
-                              {v.company || "ทั่วไป"} · {v.contact_person || "ไม่ระบุผู้ติดต่อ"}
-                            </p>
-                          </div>
-                          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-2 text-xs font-black text-white">
-                            <CheckCircle size={14} />
-                            ออกแล้ว
-                          </span>
-                        </div>
-                        <p className="mt-3 inline-flex items-center gap-2 rounded-md bg-white px-2 py-1 text-xs font-bold text-emerald-700">
-                          <Clock size={13} />
-                          {formatDateTime(v.checkout_time)}
-                        </p>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm font-bold text-slate-400">
-                      ยังไม่มีผู้เช็คเอ้าท์วันนี้
-                    </div>
-                  )}
+                <div className="rounded-2xl border border-blue-100 bg-[#f7faff] p-4">
+                  <div className="flex items-center justify-between text-sm font-bold text-slate-600">
+                    <span>เช็คเอ้าท์แล้ว</span>
+                    <span>{checkoutRate}%</span>
+                  </div>
+                  <div className="mt-3 h-3 rounded-full bg-white border border-slate-200 overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-500"
+                      style={{ width: `${checkoutRate}%` }}
+                    />
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-blue-100 bg-[#f7faff] p-4">
+                  <div className="flex items-center gap-2 text-sm font-bold text-slate-600">
+                    <TrendingUp size={16} className="text-blue-600" />
+                    ชุดข้อมูลที่แสดง
+                  </div>
+                  <p className="mt-2 text-3xl font-bold text-[#003399]">
+                    {visitors.length.toLocaleString()}
+                  </p>
                 </div>
               </div>
-            )}
-          </aside>
-        </div>
 
-        {/* Main Table Content */}
-        <div id="visitor-list" className="order-4 scroll-mt-6 overflow-hidden rounded-[28px] border border-blue-100 bg-white shadow-[0_14px_38px_rgba(0,51,153,0.09)] transition-all">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1080px] border-collapse text-left">
-              <thead>
-                <tr className="border-b border-[#002a80] bg-[#003399]">
-                  <th className="w-16 px-5 py-3 text-center">
-                    <input
-                      type="checkbox"
-                      className="h-5 w-5 cursor-pointer rounded-lg accent-[#8fb5ff]"
-                      checked={
-                        visitors.length > 0 &&
-                        selectedIds.length === visitors.length
-                      }
-                      onChange={toggleSelectAll}
-                    />
-                  </th>
-                  <th className="px-5 py-3.5 text-sm font-semibold uppercase tracking-wider text-white">
-                    ข้อมูลผู้ติดต่อ
-                  </th>
-                  <th className="px-5 py-3.5 text-sm font-semibold uppercase tracking-wider text-white">
-                    บริษัท & วัตถุประสงค์
-                  </th>
-                  <th className="px-5 py-3.5 text-sm font-semibold uppercase tracking-wider text-white">
-                    สถานะเวลา (24H)
-                  </th>
-                  <th className="px-5 py-3.5 text-right text-sm font-semibold uppercase tracking-wider text-white">
-                    จัดการ
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-blue-50">
-                {visitors.map((v) => (
-                  <tr
-                    key={v.id}
-                    className={`group transition-all hover:bg-[#f7faff] ${
-                      selectedIds.includes(v.id) ? "bg-[#eef4ff]" : ""
-                    }`}
-                  >
-                    <td className="px-5 py-4 text-center">
+              <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1fr_0.9fr] gap-6">
+                <div className="rounded-2xl border border-blue-100 p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-black text-slate-700">
+                      Check-in ตามช่วงเวลา
+                    </p>
+                    <p className="text-xs font-bold text-slate-400">
+                      {getFilterStatusText()}
+                    </p>
+                  </div>
+                  <div className="mt-5 flex h-36 items-end gap-2">
+                    {visibleHourlyBuckets.map((item) => (
+                      <div key={item.hour} className="flex flex-1 flex-col items-center gap-2">
+                        <div className="w-full h-28 flex items-end">
+                          <div
+                            className={`w-full rounded-t-md ${item.count > 0 ? "bg-blue-500" : "bg-slate-200"
+                              }`}
+                            style={{
+                              height: `${Math.max(8, (item.count / maxHourlyCount) * 100)}%`,
+                            }}
+                            title={`${String(item.hour).padStart(2, "0")}:00 - ${item.count} คน`}
+                          />
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-400">
+                          {String(item.hour).padStart(2, "0")}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-blue-100 p-4">
+                  <p className="text-sm font-black text-slate-700">
+                    วัตถุประสงค์ยอดนิยม
+                  </p>
+                  <div className="mt-4 space-y-3">
+                    {purposeBreakdown.length ? (
+                      purposeBreakdown.map(([label, count]) => (
+                        <div key={label}>
+                          <div className="flex justify-between gap-3 text-sm font-bold">
+                            <span className="truncate text-slate-700">{label}</span>
+                            <span className="text-slate-500">{count}</span>
+                          </div>
+                          <div className="mt-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                            <div
+                              className="h-full bg-amber-500"
+                              style={{ width: `${(count / maxPurposeCount) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm font-semibold text-slate-400">
+                        ยังไม่มีข้อมูลสำหรับกราฟนี้
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <aside className="rounded-[28px] border border-blue-100 bg-white p-5 shadow-[0_14px_38px_rgba(0,51,153,0.08)] sm:p-7">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 text-rose-600 font-bold text-xs uppercase tracking-wide">
+                    <AlertTriangle size={16} />
+                    Action Queue
+                  </div>
+                  <h2 className="mt-2 text-2xl font-bold text-[#003399] sm:text-3xl">
+                    รอเช็คเอ้าท์
+                  </h2>
+                  <p className="mt-1 text-base font-normal text-[#5f7394]">
+                    รายการที่อยู่นานสุดขึ้นก่อน
+                  </p>
+                </div>
+                <span className="rounded-lg bg-rose-50 px-3 py-2 text-lg font-black text-rose-600">
+                  {summary.staying}
+                </span>
+              </div>
+
+              <div className="mt-5 space-y-3">
+                {priorityCheckoutList.length ? (
+                  priorityCheckoutList.map((v) => (
+                    <div
+                      key={v.id}
+                      className="rounded-2xl border border-blue-100 p-4 transition-colors hover:border-rose-200 hover:bg-rose-50/40"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-base font-black text-slate-900">
+                            {v.full_name || "ไม่ระบุชื่อ"}
+                          </p>
+                          <p className="truncate text-sm font-semibold text-slate-500">
+                            {v.company || "ทั่วไป"} · {v.contact_person || "ไม่ระบุผู้ติดต่อ"}
+                          </p>
+                          <p className="mt-2 inline-flex items-center gap-2 rounded-md bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">
+                            <Clock size={13} />
+                            {calculateDuration(v.checkin_time)}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleCheckOut(v.id)}
+                          className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-base font-semibold text-white hover:bg-emerald-700"
+                        >
+                          <CheckCircle size={16} />
+                          ออก
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center">
+                    <UserCheck className="mx-auto text-emerald-500" size={36} />
+                    <p className="mt-3 text-sm font-bold text-slate-500">
+                      ไม่มีรายการค้างเช็คเอ้าท์
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {activeFilter === "CHECKOUT_TODAY" && (
+                <div className="mt-6 border-t border-slate-200 pt-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="flex items-center gap-2 text-sm font-black text-emerald-700">
+                        <CheckCircle size={16} />
+                        เช็คเอ้าท์แล้ววันนี้
+                      </p>
+                      <p className="mt-1 text-xs font-semibold text-slate-500">
+                        รายชื่อจากตัวกรองเช็คเอ้าท์วันนี้
+                      </p>
+                    </div>
+                    <span className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-black text-emerald-700">
+                      {completedVisitors.length}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 space-y-3">
+                    {completedVisitors.length ? (
+                      completedVisitors.slice(0, 6).map((v) => (
+                        <div
+                          key={`completed-${v.id}`}
+                          className="rounded-lg border border-emerald-100 bg-emerald-50/60 p-4"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="truncate text-base font-black text-slate-900">
+                                {v.full_name || "ไม่ระบุชื่อ"}
+                              </p>
+                              <p className="truncate text-sm font-semibold text-slate-500">
+                                {v.company || "ทั่วไป"} · {v.contact_person || "ไม่ระบุผู้ติดต่อ"}
+                              </p>
+                            </div>
+                            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-2 text-xs font-black text-white">
+                              <CheckCircle size={14} />
+                              ออกแล้ว
+                            </span>
+                          </div>
+                          <p className="mt-3 inline-flex items-center gap-2 rounded-md bg-white px-2 py-1 text-xs font-bold text-emerald-700">
+                            <Clock size={13} />
+                            {formatDateTime(v.checkout_time)}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm font-bold text-slate-400">
+                        ยังไม่มีผู้เช็คเอ้าท์วันนี้
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </aside>
+          </div>
+
+          {/* Main Table Content */}
+          <div id="visitor-list" className="order-4 scroll-mt-6 overflow-hidden rounded-[28px] border border-blue-100 bg-white shadow-[0_14px_38px_rgba(0,51,153,0.09)] transition-all">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1080px] border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-[#002a80] bg-[#003399]">
+                    <th className="w-16 px-5 py-3 text-center">
                       <input
                         type="checkbox"
-                        className="h-5 w-5 cursor-pointer rounded-lg accent-[#003399]"
-                        checked={selectedIds.includes(v.id)}
-                        onChange={() => toggleSelect(v.id)}
+                        className="h-5 w-5 cursor-pointer rounded-lg accent-[#8fb5ff]"
+                        checked={
+                          visitors.length > 0 &&
+                          selectedIds.length === visitors.length
+                        }
+                        onChange={toggleSelectAll}
                       />
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-3">
-                          <span className="rounded bg-[#eef4ff] px-2 py-0.5 text-xs font-semibold text-[#5071a5]">
-                            #{v.id}
-                          </span>
-                          {/* ค้นหาบรรทัด {v.full_name} แล้วแก้เป็นแบบนี้ */}
-                          <div className="flex items-center gap-2 text-lg font-semibold leading-tight tracking-tight text-[#1a2b49]">
-                            {v.full_name}
-                            {!v.checkout_time && (
-                              <span className="flex h-3 w-3 relative">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
-                              </span>
-                            )}
+                    </th>
+                    <th className="px-5 py-3.5 text-sm font-semibold uppercase tracking-wider text-white">
+                      ข้อมูลผู้ติดต่อ
+                    </th>
+                    <th className="px-5 py-3.5 text-sm font-semibold uppercase tracking-wider text-white">
+                      บริษัท & วัตถุประสงค์
+                    </th>
+                    <th className="px-5 py-3.5 text-sm font-semibold uppercase tracking-wider text-white">
+                      สถานะเวลา (24H)
+                    </th>
+                    <th className="px-5 py-3.5 text-right text-sm font-semibold uppercase tracking-wider text-white">
+                      จัดการ
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-blue-50">
+                  {visitors.map((v) => (
+                    <tr
+                      key={v.id}
+                      className={`group transition-all hover:bg-[#f7faff] ${selectedIds.includes(v.id) ? "bg-[#eef4ff]" : ""
+                        }`}
+                    >
+                      <td className="px-5 py-4 text-center">
+                        <input
+                          type="checkbox"
+                          className="h-5 w-5 cursor-pointer rounded-lg accent-[#003399]"
+                          checked={selectedIds.includes(v.id)}
+                          onChange={() => toggleSelect(v.id)}
+                        />
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-3">
+                            <span className="rounded bg-[#eef4ff] px-2 py-0.5 text-xs font-semibold text-[#5071a5]">
+                              #{v.id}
+                            </span>
+                            {/* ค้นหาบรรทัด {v.full_name} แล้วแก้เป็นแบบนี้ */}
+                            <div className="flex items-center gap-2 text-lg font-semibold leading-tight tracking-tight text-[#1a2b49]">
+                              {v.full_name}
+                              {!v.checkout_time && (
+                                <span className="flex h-3 w-3 relative">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex w-fit items-center gap-2 rounded-full border border-blue-100 bg-[#eef4ff] px-3 py-1 text-sm font-medium text-[#003399]">
+                            <UserCircle size={14} /> ติดต่อ:{" "}
+                            {v.contact_person || "ไม่ระบุ"}
+                          </div>
+                          {v.phone && (
+                            <div className="pl-1 text-sm font-medium text-[#5f7394]">
+                              โทร: {v.phone}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3 text-base font-semibold text-[#1a2b49]">
+                            <Building2 size={18} className="text-[#6d87ad]" />
+                            {v.company || "ทั่วไป"}
+                          </div>
+                          <div className="inline-flex rounded-lg border border-blue-100 bg-white px-3 py-1.5 text-sm font-medium text-[#5f7394]">
+                            {translatePurpose(v.purpose, v.other_purpose)}
                           </div>
                         </div>
-                        <div className="flex w-fit items-center gap-2 rounded-full border border-blue-100 bg-[#eef4ff] px-3 py-1 text-sm font-medium text-[#003399]">
-                          <UserCircle size={14} /> ติดต่อ:{" "}
-                          {v.contact_person || "ไม่ระบุ"}
-                        </div>
-                        {v.phone && (
-                          <div className="pl-1 text-sm font-medium text-[#5f7394]">
-                            โทร: {v.phone}
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center gap-4 text-slate-400">
+                            <span className="w-16 rounded-lg bg-[#eef4ff] py-1 text-center text-xs font-semibold text-[#315184]">
+                              เข้า
+                            </span>
+                            <span className="text-sm font-medium text-[#1a2b49]">
+                              {formatDateTime(v.checkin_time)}
+                            </span>
                           </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3 text-base font-semibold text-[#1a2b49]">
-                          <Building2 size={18} className="text-[#6d87ad]" />
-                          {v.company || "ทั่วไป"}
-                        </div>
-                        <div className="inline-flex rounded-lg border border-blue-100 bg-white px-3 py-1.5 text-sm font-medium text-[#5f7394]">
-                          {translatePurpose(v.purpose, v.other_purpose)}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-4 text-slate-400">
-                          <span className="w-16 rounded-lg bg-[#eef4ff] py-1 text-center text-xs font-semibold text-[#315184]">
-                            เข้า
-                          </span>
-                          <span className="text-sm font-medium text-[#1a2b49]">
-                            {formatDateTime(v.checkin_time)}
-                          </span>
-                        </div>
-                        <div
-                          className={`flex items-center gap-4 ${
-                            v.checkout_time
-                              ? "text-emerald-600"
-                              : "text-rose-500"
-                          }`}
-                        >
-                          <span
-                            className={`w-16 rounded-lg py-1 text-center text-xs font-semibold ${
-                              v.checkout_time
-                                ? "bg-emerald-100"
-                                : "bg-rose-100 animate-pulse"
-                            }`}
+                          <div
+                            className={`flex items-center gap-4 ${v.checkout_time
+                                ? "text-emerald-600"
+                                : "text-rose-500"
+                              }`}
                           >
-                            ออก
-                          </span>
-                          <span className="font-bold text-sm">
-                            {v.checkout_time
-                              ? formatDateTime(v.checkout_time)
-                              : "ยังไม่ออก"}
-                          </span>
+                            <span
+                              className={`w-16 rounded-lg py-1 text-center text-xs font-semibold ${v.checkout_time
+                                  ? "bg-emerald-100"
+                                  : "bg-rose-100 animate-pulse"
+                                }`}
+                            >
+                              ออก
+                            </span>
+                            <span className="font-bold text-sm">
+                              {v.checkout_time
+                                ? formatDateTime(v.checkout_time)
+                                : "ยังไม่ออก"}
+                            </span>
+                          </div>
+                          <div className="mt-1 flex w-fit items-center gap-2 rounded-lg border border-blue-100 bg-[#f7faff] py-1 pl-2 pr-3 text-sm font-medium text-[#5f7394]">
+                            <Clock size={14} className="text-[#6d87ad]" />{" "}
+                            {calculateDuration(v.checkin_time, v.checkout_time)}
+                          </div>
                         </div>
-                        <div className="mt-1 flex w-fit items-center gap-2 rounded-lg border border-blue-100 bg-[#f7faff] py-1 pl-2 pr-3 text-sm font-medium text-[#5f7394]">
-                          <Clock size={14} className="text-[#6d87ad]" />{" "}
-                          {calculateDuration(v.checkin_time, v.checkout_time)}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex justify-end items-center gap-2">
-                        {!v.checkout_time && (
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex justify-end items-center gap-2">
+                          {!v.checkout_time && (
+                            <button
+                              onClick={() => handleCheckOut(v.id)}
+                              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-base font-semibold text-white transition-colors hover:bg-emerald-700"
+                              title="เช็คเอ้าท์"
+                            >
+                              <CheckCircle size={17} />
+                              เช็คเอ้าท์
+                            </button>
+                          )}
                           <button
-                            onClick={() => handleCheckOut(v.id)}
-                            className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-base font-semibold text-white transition-colors hover:bg-emerald-700"
-                            title="เช็คเอ้าท์"
-                          >
-                            <CheckCircle size={17} />
-                            เช็คเอ้าท์
-                          </button>
-                        )}
-                        <button
-                          onClick={() =>
-                            setPhotoPreview({
-                              src: getVisitorPhoto(v),
-                              name: v.full_name || "ผู้มาติดต่อ",
-                              id: v.id,
-                            })
-                          }
-                          disabled={!getVisitorPhoto(v)}
-                          className={`min-h-11 min-w-11 rounded-xl border p-2.5 transition-colors ${
-                            getVisitorPhoto(v)
-                              ? "bg-white border-slate-200 text-sky-600 hover:bg-sky-50 hover:border-sky-200"
-                              : "bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed"
-                          }`}
-                          title={getVisitorPhoto(v) ? "ดูรูปบัตร" : "ไม่มีรูปบัตร"}
-                          aria-label={getVisitorPhoto(v) ? `ดูรูปบัตรของ ${v.full_name || "ผู้มาติดต่อ"}` : "ไม่มีรูปบัตร"}
-                        >
-                          <Eye size={18} />
-                        </button>
-                        <button
-                          onClick={() => openEdit(v)}
-                          className="min-h-11 min-w-11 rounded-xl border border-blue-100 bg-white p-2.5 text-[#003399] transition-colors hover:border-[#003399] hover:bg-[#eef4ff]"
-                          title="แก้ไข"
-                        >
-                          <Edit size={18} />
-                        </button>
-                        <button
-                          onClick={() =>
-                            window.open(`/print/${v.id}`, "_blank")
-                          }
-                          className="min-h-11 min-w-11 rounded-xl border border-blue-100 bg-white p-2.5 text-[#315184] transition-colors hover:border-[#003399] hover:bg-[#eef4ff]"
-                          title="พิมพ์สลิป"
-                        >
-                          <Printer size={18} />
-                        </button>
-                        <button
-                          onClick={async () => {
-                            if (confirm("ลบข้อมูลคิวนี้?")) {
-                              await supabase
-                                .from("visitors")
-                                .delete()
-                                .eq("id", v.id);
-                              loadVisitors();
-                              loadSummary();
-                              loadCheckoutQueue();
+                            onClick={() =>
+                              setPhotoPreview({
+                                src: getVisitorPhoto(v),
+                                name: v.full_name || "ผู้มาติดต่อ",
+                                id: v.id,
+                              })
                             }
-                          }}
-                          className="min-h-11 min-w-11 rounded-xl border border-rose-100 bg-white p-2.5 text-rose-500 transition-colors hover:border-rose-300 hover:bg-rose-50"
-                          title="ลบ"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {/* ส่วนแสดงผลกรณีไม่มีข้อมูล */}
-                {!isLoading && visitors.length === 0 && (
-                  <tr>
-                    <td colSpan="6" className="p-20 text-center">
-                      <div className="flex flex-col items-center gap-4 opacity-40">
-                        <Search size={64} className="text-slate-300" />
-                        <p className="text-slate-400 font-black italic text-lg">
-                          — ไม่พบรายการข้อมูลที่ตรงตามเงื่อนไข —
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                            disabled={!getVisitorPhoto(v)}
+                            className={`min-h-11 min-w-11 rounded-xl border p-2.5 transition-colors ${getVisitorPhoto(v)
+                                ? "bg-white border-slate-200 text-sky-600 hover:bg-sky-50 hover:border-sky-200"
+                                : "bg-slate-50 border-slate-100 text-slate-300 cursor-not-allowed"
+                              }`}
+                            title={getVisitorPhoto(v) ? "ดูรูปบัตร" : "ไม่มีรูปบัตร"}
+                            aria-label={getVisitorPhoto(v) ? `ดูรูปบัตรของ ${v.full_name || "ผู้มาติดต่อ"}` : "ไม่มีรูปบัตร"}
+                          >
+                            <Eye size={18} />
+                          </button>
+                          <button
+                            onClick={() => openEdit(v)}
+                            className="min-h-11 min-w-11 rounded-xl border border-blue-100 bg-white p-2.5 text-[#003399] transition-colors hover:border-[#003399] hover:bg-[#eef4ff]"
+                            title="แก้ไข"
+                          >
+                            <Edit size={18} />
+                          </button>
+                          <button
+                            onClick={() =>
+                              window.open(`/print/${v.id}`, "_blank")
+                            }
+                            className="min-h-11 min-w-11 rounded-xl border border-blue-100 bg-white p-2.5 text-[#315184] transition-colors hover:border-[#003399] hover:bg-[#eef4ff]"
+                            title="พิมพ์สลิป"
+                          >
+                            <Printer size={18} />
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (confirm("ลบข้อมูลคิวนี้?")) {
+                                await supabase
+                                  .from("visitors")
+                                  .delete()
+                                  .eq("id", v.id);
+                                loadVisitors();
+                                loadSummary();
+                                loadCheckoutQueue();
+                              }
+                            }}
+                            className="min-h-11 min-w-11 rounded-xl border border-rose-100 bg-white p-2.5 text-rose-500 transition-colors hover:border-rose-300 hover:bg-rose-50"
+                            title="ลบ"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {/* ส่วนแสดงผลกรณีไม่มีข้อมูล */}
+                  {!isLoading && visitors.length === 0 && (
+                    <tr>
+                      <td colSpan="6" className="p-20 text-center">
+                        <div className="flex flex-col items-center gap-4 opacity-40">
+                          <Search size={64} className="text-slate-300" />
+                          <p className="text-slate-400 font-black italic text-lg">
+                            — ไม่พบรายการข้อมูลที่ตรงตามเงื่อนไข —
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
         </main>
       </div>
       {photoPreview && (

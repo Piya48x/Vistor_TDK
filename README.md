@@ -2,6 +2,23 @@
 # VMS — Visitor Management System (Supabase Free Tier)
 
 ระบบบันทึกผู้มาติดต่อพื้นที่ (VMS) ใช้ **Supabase (Free tier)** เป็นฐานข้อมูล + ที่เก็บรูป + realtime.
+
+## การตั้งค่า Privacy Notice / PDPA
+
+ก่อนนำหน้าลงทะเบียนไปใช้งานจริง ให้รัน migration
+`supabase/migrations/202610300001_add_visitor_consent_audit.sql` ใน Supabase SQL Editor
+เพื่อเพิ่มหลักฐานเวลาให้ความยินยอม เวอร์ชันประกาศ และวิธีให้ความยินยอมในรายการผู้มาติดต่อ
+
+สามารถกำหนดข้อความสำคัญตามนโยบายที่ฝ่ายกฎหมายหรือ DPO อนุมัติผ่าน environment variables:
+
+```env
+VITE_PRIVACY_NOTICE_VERSION=2026-10-30
+VITE_PRIVACY_RETENTION_DAYS=90
+VITE_PRIVACY_CONTACT=อีเมลหรือช่องทางติดต่อ DPO/ผู้รับผิดชอบข้อมูลส่วนบุคคล
+```
+
+ต้องตั้งกระบวนการลบข้อมูลในฐานข้อมูลและไฟล์ภาพบน Supabase Storage ให้สอดคล้องกับ
+`VITE_PRIVACY_RETENTION_DAYS` ด้วย เพราะการแสดงระยะเวลาในหน้าเว็บเพียงอย่างเดียวไม่ได้ลบข้อมูลอัตโนมัติ
 รองรับ: เก็บข้อมูลจากบัตร (ป้อนเอง/ต่อยอดเครื่องอ่านชิป), ถ่ายภาพ, พิมพ์สลิปแนวตั้ง 58mm พร้อม QR, Dashboard เรียลไทม์, เช็คเอาท์.
 
 > หมายเหตุเรื่องเครื่องอ่านชิปบัตรประชาชน/ใบขับขี่: การอ่านจากชิปต้องใช้ไลบรารี/SDK ของผู้ผลิตเครื่องอ่าน ซึ่งต้องทำงานแบบ Native (Windows App) หรือผ่าน Web Serial/WebHID ที่ HTTPS + อุปกรณ์รองรับ.
