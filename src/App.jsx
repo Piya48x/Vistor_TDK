@@ -204,6 +204,21 @@ const PRIVACY_CONTACT =
   import.meta.env.VITE_PRIVACY_CONTACT ||
   "เจ้าหน้าที่คุ้มครองข้อมูลส่วนบุคคล / ฝ่ายธุรการ ณ จุดรักษาความปลอดภัย";
 
+const isConsentSchemaError = (error) => {
+  const errorText = [error?.code, error?.message, error?.details, error?.hint]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return (
+    error?.code === "PGRST204" ||
+    error?.code === "42703" ||
+    errorText.includes("consent_given_at") ||
+    errorText.includes("consent_notice_version") ||
+    errorText.includes("consent_method")
+  );
+};
+
 const privacyTranslations = {
   th: {
     eyebrow: "ก่อนเริ่มลงทะเบียนผู้มาติดต่อ",
@@ -1012,7 +1027,17 @@ useEffect(() => {
 
       setStep(3);
     } catch (err) {
-      alert("Error: " + err.message);
+      console.error("Visitor registration failed", err);
+
+      if (isConsentSchemaError(err)) {
+        alert(
+          language === "th"
+            ? "ฐานข้อมูลยังไม่มีคอลัมน์สำหรับบันทึกความยินยอม กรุณารันไฟล์ supabase/migrations/202610300001_add_visitor_consent_audit.sql ใน Supabase SQL Editor แล้วลองใหม่อีกครั้ง"
+            : "The consent audit columns are missing. Run supabase/migrations/202610300001_add_visitor_consent_audit.sql in the Supabase SQL Editor, then try again."
+        );
+      } else {
+        alert("Error: " + (err?.message || "Unable to save visitor data"));
+      }
     } finally {
       setLoading(false);
     }

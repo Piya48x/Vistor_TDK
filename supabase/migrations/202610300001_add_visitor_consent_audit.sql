@@ -12,6 +12,9 @@ comment on column public.visitors.consent_notice_version is
 comment on column public.visitors.consent_method is
   'How consent was captured, for example explicit_checkbox.';
 
+-- Refresh the PostgREST schema cache immediately after the table changes.
+notify pgrst, 'reload schema';
+
 -- Retention must also be enforced server-side. Configure a scheduled deletion
 -- process for visitor rows and photo objects after the approved retention period,
 -- except records under a documented legal hold.
